@@ -27,7 +27,7 @@ const screen = document.querySelector('.screen');
 return {
   scrollH: d.scrollHeight, innerH: window.innerHeight, innerW: window.innerWidth,
   scrollY: window.scrollY,
-  vvH: vv ? vv.height : null, vvTop: vv ? vv.offsetTop : null, scale: vv ? vv.scale : null,
+  vvH: vv ? vv.height : null, vvTop: vv ? vv.offsetTop : null, scale: vv ? vv.scale : 1,
   screenOverflow: screen ? screen.scrollHeight - screen.clientHeight : 0,
   nav: r('.nav'), note: r('.note'), btn: r('.btn'),
   active: document.activeElement ? document.activeElement.className : null
@@ -46,6 +46,8 @@ opts.set_capability("appium:safariInitialUrl", f"{BASE}/{PAGES[0]}")
 opts.set_capability("appium:wdaLaunchTimeout", 300000)
 opts.set_capability("appium:simulatorStartupTimeout", 600000)
 opts.set_capability("appium:wdaConnectionTimeout", 300000)
+opts.set_capability("appium:webviewConnectTimeout", 90000)
+opts.set_capability("appium:webviewConnectRetries", 20)
 opts.set_capability("appium:newCommandTimeout", 600)
 
 results = {"device": os.environ["DEVICE_NAME"], "ios": os.environ["IOS_VERSION"], "pages": {}}
@@ -95,9 +97,9 @@ try:
         time.sleep(2)
         m0 = d.execute_script(METRICS)
         shot(d, page.replace(".html", "") + "-1-initial")
-        check(page, "tient sur un écran", m0["scrollH"] <= m0["innerH"] + 1 and m0["screenOverflow"] <= 1,
+        check(page, "tient sur un écran", m0["scrollH"] <= m0["innerH"] + 1 and m0.get("screenOverflow", 0) <= 1,
               f"(page {m0['scrollH']} px, écran {m0['innerH']} px)")
-        check(page, "pas de zoom au chargement", m0["scale"] in (None, 1, 1.0), f"(échelle {m0['scale']})")
+        check(page, "pas de zoom au chargement", m0.get("scale") in (None, 1, 1.0), f"(échelle {m0.get('scale')})")
         results["pages"][page]["initial"] = m0
 
         if page != "restauration.html":
@@ -111,7 +113,7 @@ try:
         minus.click()
         time.sleep(1)
         m1 = d.execute_script(METRICS)
-        check(page, "pas de zoom après + / −", m1["scale"] in (None, 1, 1.0), f"(échelle {m1['scale']})")
+        check(page, "pas de zoom après + / −", m1.get("scale") in (None, 1, 1.0), f"(échelle {m1.get('scale')})")
 
         # 2. Toucher du champ Allergies : le vrai clavier iOS s'ouvre
         d.find_element(AppiumBy.CSS_SELECTOR, ".note").click()
@@ -125,12 +127,12 @@ try:
         time.sleep(1)
         m2 = d.execute_script(METRICS)
         shot(d, "restauration-2-clavier")
-        check(page, "pas de zoom en tapant", m2["scale"] in (None, 1, 1.0), f"(échelle {m2['scale']})")
-        if m2["note"] and m2["vvH"] is not None:
+        check(page, "pas de zoom en tapant", m2.get("scale") in (None, 1, 1.0), f"(échelle {m2.get('scale')})")
+        if m2.get("note") and m2.get("vvH") is not None:
             visible = m2["note"]["bottom"] <= m2["vvTop"] + m2["vvH"] + 1 and m2["note"]["top"] >= m2["vvTop"] - 1
             check(page, "champ Allergies visible au-dessus du clavier", visible,
                   f"(champ {m2['note']['top']:.0f}–{m2['note']['bottom']:.0f}, zone visible {m2['vvTop']:.0f}–{m2['vvTop'] + m2['vvH']:.0f})")
-        if m2["note"] and m2["btn"]:
+        if m2.get("note") and m2.get("btn"):
             check(page, "champ et bouton ne se chevauchent pas", m2["note"]["bottom"] <= m2["btn"]["top"],
                   f"(écart {m2['btn']['top'] - m2['note']['bottom']:.0f} px)")
 
@@ -150,12 +152,12 @@ try:
         m4 = d.execute_script(METRICS)
         shot(d, "restauration-4-sortie")
         check(page, "clavier fermé après sortie du champ", not keyboard_shown(d))
-        check(page, "pas de zoom après sortie du champ", m4["scale"] in (None, 1, 1.0), f"(échelle {m4['scale']})")
+        check(page, "pas de zoom après sortie du champ", m4.get("scale") in (None, 1, 1.0), f"(échelle {m4.get('scale')})")
         n0, n4 = m0["nav"], m4["nav"]
         same = abs(n0["top"] - n4["top"]) <= 1 and abs(n0["bottom"] - n4["bottom"]) <= 1
         check(page, "barre du bas revenue exactement à sa place", same,
               f"(avant {n0['top']:.0f}–{n0['bottom']:.0f}, après {n4['top']:.0f}–{n4['bottom']:.0f})")
-        check(page, "page revenue en haut (pas de décalage)", abs(m4["scrollY"]) <= 1, f"(décalage {m4['scrollY']} px)")
+        check(page, "page revenue en haut (pas de décalage)", abs(m4.get("scrollY") or 0) <= 1, f"(décalage {m4.get('scrollY')} px)")
         results["pages"][page].update({"apres_plus_moins": m1, "clavier": m2, "defilement": m3, "sortie": m4})
 finally:
     results["failures"] = failures
