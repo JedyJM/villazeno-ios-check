@@ -163,3 +163,39 @@ h1,h3,.g-row b{text-wrap:balance}
 .btn:active,.tile:active,.stepper button:active{transform:translateY(1px)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 .hero-greet .hero-sub{font:400 13px/1.35 var(--sans);opacity:.95}
+
+/* Petits écrans réels (iPhone SE dans Safari iOS : ~549 px visibles) */
+@media (max-height: 620px){
+  .page{padding:6px var(--m) 6px}
+  .back{width:32px;height:32px}
+  .page-title{font-size:23px}
+  .page-lead{font-size:12px;margin:3px 0 0 42px}
+  .meal-tabs{margin-top:8px}
+  .meal-tab{height:50px;gap:1px}
+  .meal-tab .ico{width:18px;height:18px;margin-bottom:0}
+  .meal-tab strong{font-size:12px}
+  .meal-tab span{font-size:10.5px}
+  .field{height:40px}
+  .field small{margin-bottom:2px}
+  .field .val{font-size:15px}
+  .count{height:40px}
+  .stepper button{width:30px;height:30px}
+  .caption{font-size:10.5px;margin-top:4px}
+  .seg button{height:32px}
+  .dish{height:32px}
+  .dish span{font-size:13.5px}
+  .note{height:40px}
+  .action{padding-top:6px}
+  .btn{height:42px}
+  .total strong{font-size:20px}
+  .nav{padding:3px 4px calc(3px + env(safe-area-inset-bottom))}
+  .nav a{height:44px}
+  .nav .ico{width:20px;height:20px}
+  .guide{margin-top:8px}
+  .g-row{height:34px}
+  .g-row b{font-size:15px}
+  .g-body{font-size:12.5px;line-height:1.4;padding-bottom:6px}
+  .g-body .facts{margin-bottom:6px}
+  .g-body .facts div{padding:5px 9px}
+  .g-body .facts strong{font-size:16px}
+}
