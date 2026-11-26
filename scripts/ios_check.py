@@ -27,7 +27,7 @@ const screen = document.querySelector('.screen');
 return {
   scrollH: d.scrollHeight, innerH: window.innerHeight, innerW: window.innerWidth,
   scrollY: window.scrollY,
-  vvH: vv ? vv.height : null, vvTop: vv ? vv.offsetTop : null, scale: vv ? vv.scale : 1,
+  vvH: vv ? vv.height : null, vvTop: vv ? vv.offsetTop : null, scale: vv ? vv.scale : 1, zoom: Math.round(d.clientWidth / window.innerWidth * 100) / 100, fonts: document.fonts ? document.fonts.status : null,
   screenOverflow: screen ? screen.scrollHeight - screen.clientHeight : 0,
   nav: r('.nav'), note: r('.note'), btn: r('.btn'),
   active: document.activeElement ? document.activeElement.className : null
