@@ -42,9 +42,11 @@ jobs:
           appium driver install xcuitest
           python3 -m pip install --break-system-packages "Appium-Python-Client>=4"
 
-      - name: Choisir et démarrer l'iPhone simulé (clavier matériel débranché)
+      - name: Choisir l'iPhone simulé
+        run: python3 scripts/select_device.py "$SIZE"
+
+      - name: Démarrer l'iPhone simulé (clavier matériel débranché)
         run: |
-          python3 scripts/select_device.py "$SIZE"
           defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
           xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
@@ -87,6 +89,7 @@ jobs:
           mkdir -p results && cd results
           git init -q
           git checkout -q -b "results-$SIZE"
+          echo "Exécution ${{ github.run_id }} — iPhone ${DEVICE_NAME:-inconnu} — iOS ${IOS_VERSION:-?}" > STATUS.txt
           git add -A
           git -c user.name="ios-check" -c user.email="ios-check@users.noreply.github.com" commit -qm "Résultats $SIZE ${{ github.sha }}"
           git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" "HEAD:results-$SIZE"
