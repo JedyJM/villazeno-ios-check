@@ -37,7 +37,8 @@ jobs:
 
       - name: Installer Appium et le pilote iOS
         run: |
-          npm install -g appium@2
+          npm install -g appium@latest
+          appium --version
           appium driver install xcuitest
           python3 -m pip install --break-system-packages "Appium-Python-Client>=4"
 
@@ -83,7 +84,7 @@ jobs:
       - name: Publier les résultats sur la branche results-${{ matrix.size }}
         if: always()
         run: |
-          cd results
+          mkdir -p results && cd results
           git init -q
           git checkout -q -b "results-$SIZE"
           git add -A
