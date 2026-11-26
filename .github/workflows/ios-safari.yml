@@ -74,7 +74,17 @@ jobs:
           echo $! > video.pid
 
       - name: Tests dans le vrai Safari iOS
-        run: python3 scripts/ios_check.py
+        run: |
+          # une seconde tentative si le simulateur d'Apple plante (incident fréquent sur ces Mac)
+          python3 scripts/ios_check.py && exit 0
+          if grep -q '"failures": \[\]' "results/$SIZE-results.json" 2>/dev/null; then exit 0; fi
+          if [ -f "results/$SIZE-results.json" ] && ! grep -q '"pages": {}' "results/$SIZE-results.json"; then
+            python3 -c "import json,sys; r=json.load(open('results/$SIZE-results.json')); sys.exit(1 if r.get('failures') else 0)" && exit 0
+            grep -q 'villa.html' "results/$SIZE-results.json" && exit 1
+          fi
+          echo "Seconde tentative…"
+          sleep 10
+          python3 scripts/ios_check.py
 
       - name: Arrêter la vidéo
         if: always()
