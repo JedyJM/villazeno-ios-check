@@ -45,11 +45,11 @@ jobs:
       - name: Choisir l'iPhone simulé
         run: python3 scripts/select_device.py "$SIZE"
 
-      - name: Démarrer l'iPhone simulé (clavier matériel débranché)
+      - name: Préparer l'iPhone simulé (clavier matériel débranché)
         run: |
           defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
-          xcrun simctl boot "$UDID" || true
-          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl shutdown "$UDID" || true
+          # Appium démarre lui-même l'iPhone avec le bon réglage clavier
 
       - name: Servir les maquettes
         if: ${{ github.event.inputs.base_url == '' || github.event.inputs.base_url == null }}

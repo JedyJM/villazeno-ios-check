@@ -44,6 +44,8 @@ opts.set_capability("appium:connectHardwareKeyboard", False)
 opts.set_capability("appium:forceSimulatorSoftwareKeyboardPresence", True)
 opts.set_capability("appium:safariInitialUrl", f"{BASE}/{PAGES[0]}")
 opts.set_capability("appium:wdaLaunchTimeout", 300000)
+opts.set_capability("appium:simulatorStartupTimeout", 600000)
+opts.set_capability("appium:wdaConnectionTimeout", 300000)
 opts.set_capability("appium:newCommandTimeout", 600)
 
 results = {"device": os.environ["DEVICE_NAME"], "ios": os.environ["IOS_VERSION"], "pages": {}}
