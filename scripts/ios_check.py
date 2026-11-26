@@ -30,7 +30,12 @@ return {
   vvH: vv ? vv.height : null, vvTop: vv ? vv.offsetTop : null, scale: vv ? vv.scale : 1, zoom: Math.round(d.clientWidth / window.innerWidth * 100) / 100, fonts: document.fonts ? document.fonts.status : null,
   screenOverflow: screen ? screen.scrollHeight - screen.clientHeight : 0,
   nav: r('.nav'), note: r('.note'), btn: r('.btn'),
-  active: document.activeElement ? document.activeElement.className : null
+  active: document.activeElement ? document.activeElement.className : null,
+  overlaps: [...document.querySelectorAll('.tile')].filter(t => {
+    const pl = t.querySelector('.plume, .ico'); if (!pl) return false; const a = pl.getBoundingClientRect();
+    return [...t.querySelectorAll('h3, p')].some(e => { const r = document.createRange(); r.selectNodeContents(e); const b = r.getBoundingClientRect();
+      return !(b.right <= a.left || b.left >= a.right || b.bottom <= a.top || b.top >= a.bottom); });
+  }).map(t => t.querySelector('h3').textContent)
 };
 """
 
@@ -118,6 +123,8 @@ try:
         check(page, "tient sur un écran", m0["scrollH"] <= m0["innerH"] + 1 and m0.get("screenOverflow", 0) <= 1,
               f"(page {m0['scrollH']} px, écran {m0['innerH']} px)")
         check(page, "pas de zoom au chargement", no_zoom(m0), f"(échelle {m0.get('scale')}, zoom {m0.get('zoom')})")
+        if page.startswith("accueil"):
+            check(page, "dessins sans chevauchement avec les textes", not m0.get("overlaps"), f"({', '.join(m0.get('overlaps') or [])})")
         results["pages"][page]["initial"] = m0
 
         if page != "restauration.html":
