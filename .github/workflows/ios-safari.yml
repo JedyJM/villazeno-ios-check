@@ -1,0 +1,97 @@
+name: Vérification iOS Safari
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Adresse à tester (vide = maquettes de ce dépôt)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ios-check
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        size: [big, small]   # big = iPhone 15 (ou le plus proche), small = iPhone SE
+    env:
+      SIZE: ${{ matrix.size }}
+      OUT: results
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Installer Appium et le pilote iOS
+        run: |
+          npm install -g appium@2
+          appium driver install xcuitest
+          python3 -m pip install --break-system-packages "Appium-Python-Client>=4"
+
+      - name: Choisir et démarrer l'iPhone simulé (clavier matériel débranché)
+        run: |
+          python3 scripts/select_device.py "$SIZE"
+          defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Servir les maquettes
+        if: ${{ github.event.inputs.base_url == '' || github.event.inputs.base_url == null }}
+        run: |
+          nohup python3 -m http.server 8000 --directory site > server.log 2>&1 &
+          sleep 2
+          echo "BASE_URL=http://localhost:8000" >> "$GITHUB_ENV"
+
+      - name: Adresse externe
+        if: ${{ github.event.inputs.base_url != '' && github.event.inputs.base_url != null }}
+        run: echo "BASE_URL=${{ github.event.inputs.base_url }}" >> "$GITHUB_ENV"
+
+      - name: Démarrer Appium
+        run: |
+          nohup appium --log-level warn --log appium.log > /dev/null 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4723/status && break; sleep 2; done
+
+      - name: Lancer l'enregistrement vidéo
+        run: |
+          mkdir -p results
+          nohup xcrun simctl io "$UDID" recordVideo --codec=h264 --force "results/$SIZE-video.mp4" > video.log 2>&1 &
+          echo $! > video.pid
+
+      - name: Tests dans le vrai Safari iOS
+        run: python3 scripts/ios_check.py
+
+      - name: Arrêter la vidéo
+        if: always()
+        run: |
+          kill -INT "$(cat video.pid)" || true
+          sleep 5
+          cp appium.log "results/$SIZE-appium.log" || true
+
+      - name: Publier les résultats sur la branche results-${{ matrix.size }}
+        if: always()
+        run: |
+          cd results
+          git init -q
+          git checkout -q -b "results-$SIZE"
+          git add -A
+          git -c user.name="ios-check" -c user.email="ios-check@users.noreply.github.com" commit -qm "Résultats $SIZE ${{ github.sha }}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" "HEAD:results-$SIZE"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: resultats-${{ matrix.size }}
+          path: results/
