@@ -31,6 +31,7 @@ return {
   screenOverflow: screen ? screen.scrollHeight - screen.clientHeight : 0,
   nav: r('.nav'), note: r('.note'), btn: r('.btn'),
   active: document.activeElement ? document.activeElement.className : null,
+  debord: (() => { const out = []; document.querySelectorAll('.tile, .quick a').forEach(card => { const cb = card.getBoundingClientRect(); card.querySelectorAll('h3, p, strong, span').forEach(e => { const r = document.createRange(); r.selectNodeContents(e); const b = r.getBoundingClientRect(); if (b.width && (b.right > cb.right - 4 || b.bottom > cb.bottom - 2 || b.left < cb.left + 2)) out.push(e.textContent.trim()); }); }); return out; })(),
   overlaps: [...document.querySelectorAll('.tile')].filter(t => {
     const pl = t.querySelector('.plume, .ico'); if (!pl) return false; const a = pl.getBoundingClientRect();
     return [...t.querySelectorAll('h3, p')].some(e => { const r = document.createRange(); r.selectNodeContents(e); const b = r.getBoundingClientRect();
@@ -124,6 +125,7 @@ try:
               f"(page {m0['scrollH']} px, écran {m0['innerH']} px)")
         check(page, "pas de zoom au chargement", no_zoom(m0), f"(échelle {m0.get('scale')}, zoom {m0.get('zoom')})")
         if page.startswith("accueil"):
+            check(page, "textes dans leurs cartes (aucun débordement)", not m0.get("debord"), f"({', '.join(m0.get('debord') or [])})")
             check(page, "dessins sans chevauchement avec les textes", not m0.get("overlaps"), f"({', '.join(m0.get('overlaps') or [])})")
         results["pages"][page]["initial"] = m0
 
