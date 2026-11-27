@@ -15,7 +15,7 @@ from appium.options.ios import XCUITestOptions
 from appium.webdriver.common.appiumby import AppiumBy
 
 BASE = os.environ.get("BASE_URL", "http://localhost:8000").rstrip("/")
-PAGES = os.environ.get("PAGES", "accueil.html,accueil-plume.html,restauration.html,villa.html").split(",")
+PAGES = os.environ.get("PAGES", "accueil-plume.html,restauration.html,restauration-modifier.html,restauration-diner.html,restauration-petitdej.html,restauration-supplements.html,villa.html").split(",")
 OUT = os.environ.get("OUT", "results")
 LABEL = os.environ.get("SIZE", "device")
 os.makedirs(OUT, exist_ok=True)
@@ -145,18 +145,21 @@ try:
             check(page, "dessins sans chevauchement avec les textes", not m0.get("overlaps"), f"({', '.join(m0.get('overlaps') or [])})")
         results["pages"][page]["initial"] = m0
 
-        if page != "restauration.html":
+        if not page.startswith("restauration"):
             continue
+        stem = page.replace(".html", "")
 
+        m1 = None
         # 1. Touchers rapides sur + puis − : aucun zoom ne doit se déclencher
-        plus = d.find_element(AppiumBy.CSS_SELECTOR, ".dish .stepper button:last-child")
-        minus = d.find_element(AppiumBy.CSS_SELECTOR, ".dish .stepper button:first-child")
-        for _ in range(3):
-            plus.click()
-        minus.click()
-        time.sleep(1)
-        m1 = d.execute_script(METRICS)
-        check(page, "pas de zoom après + / −", no_zoom(m1), f"(échelle {m1.get('scale')}, zoom {m1.get('zoom')})")
+        pl = d.find_elements(AppiumBy.CSS_SELECTOR, ".stepper button:last-child")
+        mi = d.find_elements(AppiumBy.CSS_SELECTOR, ".stepper button:first-child")
+        if pl and mi:
+            for _ in range(3):
+                pl[-1].click()
+            mi[-1].click()
+            time.sleep(1)
+            m1 = d.execute_script(METRICS)
+            check(page, "pas de zoom après + / −", no_zoom(m1), f"(échelle {m1.get('scale')}, zoom {m1.get('zoom')})")
 
         # 2. Toucher du champ Allergies : le vrai clavier iOS s'ouvre
         d.find_element(AppiumBy.CSS_SELECTOR, ".note").click()
@@ -169,7 +172,7 @@ try:
         web(d)
         time.sleep(1)
         m2 = d.execute_script(METRICS)
-        shot(d, "restauration-2-clavier")
+        shot(d, stem + "-2-clavier")
         check(page, "pas de zoom en tapant", no_zoom(m2), f"(échelle {m2.get('scale')}, zoom {m2.get('zoom')})")
         if m2.get("note") and m2.get("vvH") is not None:
             n = m2["note"]
@@ -190,13 +193,13 @@ try:
         time.sleep(1)
         web(d)
         m3 = d.execute_script(METRICS)
-        shot(d, "restauration-3-defilement")
+        shot(d, stem + "-3-defilement")
 
         # 4. Sortie du champ : toucher le titre, le clavier se ferme
         d.find_element(AppiumBy.CSS_SELECTOR, ".page-title").click()
         time.sleep(1.5)
         m4 = d.execute_script(METRICS)
-        shot(d, "restauration-4-sortie")
+        shot(d, stem + "-4-sortie")
         check(page, "clavier fermé après sortie du champ", not keyboard_shown(d))
         check(page, "pas de zoom après sortie du champ", no_zoom(m4), f"(échelle {m4.get('scale')}, zoom {m4.get('zoom')})")
         n0, n4 = m0["nav"], m4["nav"]
