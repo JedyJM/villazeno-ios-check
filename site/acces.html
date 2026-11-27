@@ -1,0 +1,90 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Restauration | Villa Zen’O</title><meta name="theme-color" content="#F5EFE6"><link rel="stylesheet" href="zeno.css"><style>
+.picks{display:grid;gap:8px;flex:none}
+.picks.n2{grid-template-columns:1fr 1fr}.picks.n3{grid-template-columns:repeat(3,1fr)}
+.pick{position:relative;height:clamp(84px,12svh,104px);border:1px solid var(--sable);border-radius:var(--r);background:var(--lin);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:500 13.5px/1.15 var(--sans);color:var(--encre);text-align:center;padding:0 6px}
+.pick .plume-p{width:44px;height:44px;color:#2B2420}
+.pick[aria-pressed=true],.pick[aria-checked=true]{background:var(--palmeraie);border-color:var(--palmeraie);color:var(--lin)}
+.pick[aria-pressed=true] .plume-p,.pick[aria-checked=true] .plume-p{color:#F1E4D0}
+.pick .ok{position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;background:#F1E4D0;color:var(--palmeraie);display:grid;place-items:center}
+.pick .ok svg{width:12px;height:12px}
+.lbl-s{font:500 9.5px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--taupe);flex:none}
+.addnote{align-self:flex-start;font:500 13.5px/1 var(--sans);color:var(--pise);padding:12px 0 4px;flex:none}
+.btn.full{width:100%;margin-top:auto;flex:none}.note2{margin-bottom:var(--gap)}
+.note2{width:100%;height:clamp(64px,10svh,88px);border:1px solid var(--sable);border-radius:var(--r);background:var(--lin);padding:12px;font:400 16px/1.35 var(--sans);resize:none;flex:none;color:var(--encre)}
+.note2::placeholder{color:#776B5F}.note2:focus{outline:none;border-color:var(--pise)}
+.picks.grow{flex:none;height:clamp(96px,22svh,160px)}.picks.n3.grow{height:clamp(90px,19svh,140px)}.picks.grow .pick{height:auto}
+.picks.grow .plume-p{width:clamp(40px,10svh,80px);height:clamp(40px,10svh,80px)}.picks.n3.grow .plume-p{width:clamp(36px,8svh,64px);height:clamp(36px,8svh,64px)}
+.confirm{font:400 11.5px/1.2 var(--sans);color:var(--taupe);text-align:center;margin-top:6px;flex:none}
+.free{font:400 11.5px/1.2 var(--sans);color:var(--taupe);text-align:center;margin-top:6px;flex:none}
+.card{border:1px solid var(--sable);border-radius:var(--r);background:var(--lin);padding:10px 12px;flex:none}
+.heat{display:flex;align-items:center;gap:10px}
+.heat .plume-h{width:34px;height:34px;color:#2B2420;flex:none}
+.heat strong{display:block;font:400 16px/1.15 var(--serif)}
+.heat span{display:block;font:400 12px/1.3 var(--sans);color:var(--taupe);margin-top:2px}
+.heat b{color:var(--encre);font-weight:500}
+.routes{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:none}
+.route{border:1px solid var(--sable);border-radius:var(--r);background:var(--lin);padding:9px 10px}
+.route.reco{border-color:var(--palmeraie)}
+.route .top{display:flex;justify-content:space-between;align-items:baseline;gap:4px}
+.route strong{font:400 16px/1.1 var(--serif);white-space:nowrap}
+.route .tag{font:500 10px/1 var(--sans);color:var(--palmeraie);white-space:nowrap}
+.route .via{display:block;font:500 12.5px/1.2 var(--sans);color:var(--pise);margin-top:4px}
+.route p{font:400 11.5px/1.3 var(--sans);color:var(--taupe);margin-top:3px}
+.warn{display:flex;gap:8px;align-items:flex-start;border-left:2px solid var(--pise);padding:4px 0 4px 10px;font:400 12px/1.3 var(--sans);color:var(--encre);flex:none}
+.warn b{font-weight:500;color:var(--pise)}
+.map{flex:1;min-height:90px;border-radius:var(--r);overflow:hidden;border:1px solid var(--sable)}
+.map img{width:100%;height:100%;object-fit:cover;display:block}
+.go{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:none}
+.go .btn{width:100%;padding:0 10px;text-decoration:none}
+.route .eb{display:block;font:500 9.5px/1 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--taupe);margin-bottom:5px}.route.reco .eb{color:var(--palmeraie)}
+.route .min{font:400 12px/1 var(--sans);color:var(--taupe);white-space:nowrap}
+.scrim{position:fixed;inset:0;z-index:50;background:rgba(35,31,27,.42)}
+.sheet{z-index:51;position:fixed;left:0;right:0;bottom:0;max-height:88svh;background:var(--chaux);border-radius:14px 14px 0 0;padding:8px var(--m) calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column}
+.sheet .grab{width:38px;height:4px;border-radius:2px;background:var(--sable);margin:0 auto 8px}
+.sheet-head{display:flex;justify-content:space-between;align-items:center}
+.sheet-head h2{font:400 24px/1 var(--serif)}
+.sheet-head button{font:500 13.5px/1 var(--sans);color:var(--pise)}
+.sheet h3{margin-top:12px}
+.crow{display:flex;align-items:center;gap:10px;height:clamp(42px,6svh,48px);border-bottom:1px solid var(--sable-2)}
+.crow:last-child{border-bottom:0}
+.crow .who{flex:1;min-width:0;font:400 14.5px/1.15 var(--sans)}
+.crow .who small{display:block;font:400 11px/1.2 var(--sans);color:var(--taupe)}
+.crow .num{font:400 13.5px/1 var(--sans);color:var(--taupe);font-variant-numeric:tabular-nums;white-space:nowrap}
+.crow .num i{font-style:normal;font-size:11px}
+.crow .act{width:32px;height:32px;border-radius:50%;border:1px solid var(--sable);display:grid;place-items:center;color:var(--pise);flex:none}
+.crow .act svg{width:16px;height:16px}
+.crow.main .act{background:var(--palmeraie);border-color:var(--palmeraie);color:var(--lin)}
+@media (max-height:620px){
+  .note2{height:52px;padding:8px 12px}
+  .pick{height:70px}.pick .plume-p{width:32px;height:32px}
+  .route{padding:6px 8px}.route p{font-size:11px}
+  .sheet h3{margin-top:8px}.crow{height:36px}.sheet-head h2{font-size:21px}
+}
+</style><style>
+.it-head{display:flex;justify-content:space-between;align-items:center;flex:none}
+.it-head .h2{font:400 19px/1 var(--serif)}
+.pill{font:500 11.5px/1 var(--sans);padding:5px 9px;border-radius:999px;background:#E6EBE3;color:var(--palmeraie);white-space:nowrap}
+.rt{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:none}
+.rt>div{border:1px solid var(--sable);border-radius:var(--r);background:var(--lin);padding:9px 10px 10px}
+.rt>div.on{border-color:var(--palmeraie)}
+.rt .n{display:flex;justify-content:space-between;align-items:center;gap:4px}
+.rt .n strong{font:400 16px/1.1 var(--serif);white-space:nowrap}
+.rt .n .pill{font-size:10px;padding:3px 7px}
+.rt .via{display:block;margin-top:5px;font:500 13px/1.2 var(--sans);color:var(--pise)}
+.rt .min{display:block;font:500 13px/1.2 var(--sans);color:var(--encre);margin-top:1px}
+.rt p{font:400 11.5px/1.35 var(--sans);color:var(--taupe);margin-top:4px}
+.att{display:flex;gap:9px;align-items:flex-start;background:#F6E3DF;border-radius:var(--r);padding:8px 11px;color:#A3261C;font:400 12.5px/1.35 var(--sans);flex:none}
+.att svg{width:18px;height:18px;flex:none;margin-top:1px}
+.att b{font-weight:600}
+.map4{flex:1;min-height:110px;border-radius:var(--r);overflow:hidden;border:1px solid var(--sable)}
+.map4 img{width:100%;height:100%;object-fit:cover;object-position:50% 78%;display:block}
+.go4{display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:none}
+.go4 a{height:46px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;gap:8px;font:500 14px/1 var(--sans);text-decoration:none}
+.go4 a.p{background:var(--palmeraie);color:var(--lin)}.go4 a.s{border:1px solid var(--palmeraie);color:var(--palmeraie)}
+.go4 svg{width:17px;height:17px}
+@media (max-height:620px){.rt>div{padding:6px 8px 7px}.rt p{font-size:11px}.rt .via,.rt .min{font-size:12px}.att{padding:6px 10px;font-size:11.5px}.go4 a{height:40px}.it-head .h2{font-size:17px}}
+</style></head><body><div class="app">
+<main class="screen"><div class="page"><div class="page-head"><a class="back" href="#" aria-label="Accueil"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 5.5 8 12l6.5 6.5"/></svg></a><h1 class="page-title">Accès à la villa</h1></div><div class="it-head gap"><span class="h2">Votre itinéraire</span><span class="pill">Environ 20 min</span></div><div class="rt" style="margin-top:8px"><div class="on"><div class="n"><strong>Itinéraire 1</strong><span class="pill">Recommandé</span></div><span class="via">Par la pharmacie</span><span class="min">20 min</span><p>Au feu, pharmacie sur votre gauche : tournez à gauche, puis tout droit.</p></div><div><div class="n"><strong>Itinéraire 2</strong></div><span class="via">Par Bab Atlas</span><span class="min">21 min</span><p>Sur la N8 jusqu’au rond-point Bab Atlas, puis à gauche.</p></div></div><div class="att gap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 2.8 19.5h18.4z"/><path d="M12 10v4.2M12 17.2v.1"/></svg><span><b>Attention :</b> ne prenez jamais la piste le long du Palais Namaskar, même si le GPS la propose.</span></div><div class="map4 gap"><img src="img/acces-carte.webp" alt="Carte des deux itinéraires ; la piste du Palais Namaskar est barrée en rouge"></div><div class="go4 gap"><a class="p" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s6.6-5.8 6.6-11A6.6 6.6 0 0 0 5.4 10c0 5.2 6.6 11 6.6 11z"/><circle cx="12" cy="10" r="2.3"/></svg>Google Maps</a><a class="s" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4 4 10.5l6.5 2.8L13.5 20z"/></svg>Waze</a></div></div></main><nav class="nav" aria-label="Navigation"><a href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.6 12 4l8 6.6V20a1 1 0 0 1-1 1h-4.4v-5.6H9.4V21H5a1 1 0 0 1-1-1z"/></svg>Accueil</a><a href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4.6" width="14" height="16.4" rx="1.8"/><path d="M9 3.4h6v2.6H9z"/><path d="m8.6 11.6 1.4 1.4 2.6-2.6M14 12h1.6M8.6 16.6h6.8"/></svg>Mes demandes</a><a href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s6.6-5.8 6.6-11A6.6 6.6 0 0 0 5.4 10c0 5.2 6.6 11 6.6 11z"/><circle cx="12" cy="10" r="2.3"/></svg>Accès</a><a href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.4" r="3.4"/><path d="M5.4 20.2c.8-3.6 3.5-5.6 6.6-5.6s5.8 2 6.6 5.6"/></svg>Contacts utiles</a><a href="#" aria-label="Écrire à Mehdi, votre hôte, sur WhatsApp"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.4 19.6l1.2-3.7a8.1 8.1 0 1 1 2.9 2.7z"/><path d="M9.4 8.5c.3-.5.8-.5 1.1 0l.7 1.3c.15.3.05.6-.2.8l-.4.4c.5 1.1 1.3 1.9 2.4 2.4l.4-.4c.2-.25.5-.35.8-.2l1.3.7c.5.3.5.8 0 1.1-.6.5-1.4.8-2.2.6-2.1-.6-3.9-2.4-4.5-4.5-.2-.8.1-1.6.6-2.2z"/></svg>Mehdi</a></nav></div></body></html>

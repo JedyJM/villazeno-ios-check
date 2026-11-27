@@ -15,7 +15,7 @@ from appium.options.ios import XCUITestOptions
 from appium.webdriver.common.appiumby import AppiumBy
 
 BASE = os.environ.get("BASE_URL", "http://localhost:8000").rstrip("/")
-PAGES = os.environ.get("PAGES", "accueil-plume.html,restauration.html,restauration-modifier.html,restauration-diner.html,restauration-petitdej.html,restauration-supplements.html,villa.html").split(",")
+PAGES = os.environ.get("PAGES", "services.html,piscine.html,piscine-sans-chauffage.html,contacts.html,acces.html").split(",")
 OUT = os.environ.get("OUT", "results")
 LABEL = os.environ.get("SIZE", "device")
 os.makedirs(OUT, exist_ok=True)
@@ -29,7 +29,7 @@ return {
   scrollY: window.scrollY,
   vvH: vv ? vv.height : null, vvTop: vv ? vv.offsetTop : null, scale: vv ? vv.scale : 1, zoom: Math.round(d.clientWidth / window.innerWidth * 100) / 100, fonts: document.fonts ? document.fonts.status : null,
   screenOverflow: screen ? screen.scrollHeight - screen.clientHeight : 0,
-  nav: r('.nav'), note: r('.note'), btn: r('.btn'),
+  nav: r('.nav'), note: r('.note, .note2'), btn: r('.btn'),
   active: document.activeElement ? document.activeElement.className : null,
   debord: (() => { const out = []; document.querySelectorAll('.tile, .quick a').forEach(card => { const cb = card.getBoundingClientRect(); card.querySelectorAll('h3, p, strong, span').forEach(e => { const r = document.createRange(); r.selectNodeContents(e); const b = r.getBoundingClientRect(); if (b.width && (b.right > cb.right - 4 || b.bottom > cb.bottom - 2 || b.left < cb.left + 2)) out.push(e.textContent.trim()); }); }); return out; })(),
   overlaps: [...document.querySelectorAll('.tile')].filter(t => {
@@ -150,7 +150,7 @@ try:
             check(page, "dessins sans chevauchement avec les textes", not m0.get("overlaps"), f"({', '.join(m0.get('overlaps') or [])})")
         results["pages"][page]["initial"] = m0
 
-        if not page.startswith("restauration"):
+        if not page.startswith(("restauration", "services", "piscine")):
             continue
         stem = page.replace(".html", "")
 
@@ -167,7 +167,7 @@ try:
             check(page, "pas de zoom après + / −", no_zoom(m1), f"(échelle {m1.get('scale')}, zoom {m1.get('zoom')})")
 
         # 2. Toucher du champ Allergies : le vrai clavier iOS s'ouvre
-        d.find_element(AppiumBy.CSS_SELECTOR, ".note").click()
+        d.find_element(AppiumBy.CSS_SELECTOR, ".note, .note2").click()
         time.sleep(1.5)
         check(page, "clavier iOS ouvert", keyboard_shown(d))
         native(d)
