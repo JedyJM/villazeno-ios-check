@@ -44,7 +44,7 @@ jobs:
           npm install -g appium@latest
           appium --version
           appium driver install xcuitest
-          python3 -m pip install --break-system-packages "Appium-Python-Client>=4"
+          python3 -m pip install --break-system-packages --ignore-installed "Appium-Python-Client>=4"
 
       - name: Choisir l'iPhone simulé
         run: python3 scripts/select_device.py "$SIZE"
