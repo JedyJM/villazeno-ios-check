@@ -95,13 +95,29 @@ def no_zoom(m):
 def dismiss_safari_tips(d):
     """Ferme les bulles d'aide de Safari (premier lancement), qui masquent le bas de l'écran."""
     native(d)
-    for label in ("Close", "Fermer", "Not Now", "Continue", "OK"):
-        for el in d.find_elements(AppiumBy.ACCESSIBILITY_ID, label):
+    pred = ("type == 'XCUIElementTypeButton' AND (name IN {'Close','Fermer','Not Now','Continue','OK','Dismiss','xmark','close'} "
+            "OR name CONTAINS[c] 'close' OR name CONTAINS[c] 'dismiss' OR label CONTAINS[c] 'close' OR label CONTAINS[c] 'fermer')")
+    for _ in range(4):
+        tip = d.find_elements(AppiumBy.IOS_PREDICATE, "label CONTAINS[c] 'Bookmarks' OR label CONTAINS[c] 'Signets' OR label CONTAINS[c] 'Safari settings'")
+        clicked = False
+        for el in d.find_elements(AppiumBy.IOS_PREDICATE, pred):
             try:
-                el.click()
-                time.sleep(0.5)
+                el.click(); clicked = True; time.sleep(0.6)
             except Exception:
                 pass
+        if not tip and not clicked:
+            break
+        if tip and not clicked:
+            # Bulle sans bouton reconnu : on journalise sa structure et on touche hors bulle (en haut de l'écran)
+            try:
+                os.makedirs(OUT, exist_ok=True)
+                open(os.path.join(OUT, f"{LABEL}-tip-source.xml"), "w").write(d.page_source)
+            except Exception:
+                pass
+            r = d.get_window_size()
+            d.execute_script("mobile: tap", {"x": r["width"] * 0.5, "y": 8})
+            time.sleep(0.6)
+        time.sleep(0.8)
     web(d)
 
 
