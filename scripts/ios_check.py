@@ -128,7 +128,12 @@ def check(page, name, ok, detail=""):
     print(("OK   " if ok else "ÉCHEC"), page, "-", name, detail, flush=True)
 
 
-d = webdriver.Remote("http://127.0.0.1:4723", options=opts)
+try:
+    from appium.webdriver.client_config import AppiumClientConfig
+    _cfg = AppiumClientConfig(remote_server_addr="http://127.0.0.1:4723", timeout=900)
+    d = webdriver.Remote(options=opts, client_config=_cfg)
+except ImportError:
+    d = webdriver.Remote("http://127.0.0.1:4723", options=opts)
 try:
     for page in PAGES:
         web(d)

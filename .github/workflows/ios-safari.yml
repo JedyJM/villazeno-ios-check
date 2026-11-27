@@ -55,6 +55,10 @@ jobs:
           xcrun simctl shutdown "$UDID" || true
           # Appium démarre lui-même l'iPhone avec le bon réglage clavier
 
+      - name: Démarrer l'iPhone simulé (attente du démarrage complet)
+        run: |
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
       - name: Servir les maquettes
         if: ${{ github.event.inputs.base_url == '' || github.event.inputs.base_url == null }}
         run: |
