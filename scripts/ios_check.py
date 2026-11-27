@@ -172,7 +172,11 @@ try:
         check(page, "clavier iOS ouvert", keyboard_shown(d))
         native(d)
         field = d.find_elements(AppiumBy.IOS_PREDICATE, "hasKeyboardFocus == 1")
-        target = field[0] if field else d.find_element(AppiumBy.CLASS_NAME, "XCUIElementTypeTextField")
+        if field:
+            target = field[0]
+        else:
+            cands = d.find_elements(AppiumBy.CLASS_NAME, "XCUIElementTypeTextField") + d.find_elements(AppiumBy.CLASS_NAME, "XCUIElementTypeTextView")
+            target = cands[0]
         target.send_keys("Sans gluten pour un enfant")   # frappe au vrai clavier
         web(d)
         time.sleep(1)
