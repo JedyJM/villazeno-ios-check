@@ -9,6 +9,10 @@ on:
         description: "Adresse à tester (vide = maquettes de ce dépôt)"
         required: false
         default: ""
+      runner:
+        description: "Machine GitHub (macos-15 ou macos-15-intel si file d'attente)"
+        required: false
+        default: "macos-15-intel"
 
 permissions:
   contents: write
@@ -19,7 +23,7 @@ concurrency:
 
 jobs:
   ios:
-    runs-on: macos-15
+    runs-on: ${{ inputs.runner || 'macos-15-intel' }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
