@@ -32,10 +32,10 @@ jobs:
     env:
       SIZE: ${{ matrix.size }}
       OUT: results
-      # Run audit du 28/11 : P0 (sans API admin) puis AUD1…AUD8 côté invité sur le séjour
-      # démo : aucune remise à zéro, aucun envoi, aucun appel admin. Vide = suite complète.
-      # Pas un secret.
-      E2E_ONLY: "AUD"
+      # Invité seul : P0 (sans API admin) puis AUD1…AUD8 (audit du 28/11) et DES1…DES5
+      # (nouveau design : La Villa, Wi-Fi & TV, Loisirs, Nos adresses, brochure zoomée) sur le
+      # séjour démo : aucune remise à zéro, aucun envoi, aucun appel admin. Pas un secret.
+      E2E_ONLY: "AUD,DES"
     steps:
       - uses: actions/checkout@v4
 

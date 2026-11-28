@@ -51,11 +51,14 @@ MAXS = [MAX_SENDS]  # passe à 0 si le séjour démo n'est pas propre
 # (aucune remise à zéro du séjour démo, aucun envoi invité). Vide = suite complète.
 ONLY = [x.strip().upper() for x in os.environ.get("E2E_ONLY", "").split(",") if x.strip()]
 AUD_IDS = ("AUD1", "AUD2", "AUD4", "AUD5", "AUD6", "AUD8")
-ONLY_OK = ("A1", "A2", "A3") + AUD_IDS
+DES_IDS = ("DES1", "DES2", "DES3", "DES4", "DES5")  # nouveau design : La Villa, Wi-Fi, Loisirs, Nos adresses, brochure
+ONLY_OK = ("A1", "A2", "A3") + AUD_IDS + DES_IDS
 if "AUD" in ONLY:  # « AUD » = tous les tests de l'audit du 28/11
     ONLY = [x for x in ONLY if x != "AUD"] + list(AUD_IDS)
+if "DES" in ONLY:  # « DES » = tous les tests du nouveau design
+    ONLY = [x for x in ONLY if x != "DES"] + list(DES_IDS)
 # Mode audit : invité seulement, aucun appel à l'API admin (ADMIN_TEST_MODE coupé sur staging)
-NO_ADMIN = bool(ONLY) and all(x.startswith("AUD") for x in ONLY)
+NO_ADMIN = bool(ONLY) and all(x.startswith(("AUD", "DES")) for x in ONLY)
 os.makedirs(OUT, exist_ok=True)
 
 HOST = urllib.parse.urlparse(BASE).hostname or ""
@@ -977,6 +980,11 @@ def text_of(sel):
     return js("const e=document.querySelector(arguments[0]); return e ? e.textContent.trim() : null;", sel)
 
 
+def norm(t):
+    """Espaces insécables (U+00A0, U+202F) et autres blancs ramenés à une espace simple."""
+    return " ".join(str(t or "").replace("\u00a0", " ").replace("\u202f", " ").split())
+
+
 def demo_travelers():
     """Adultes + enfants du séjour démo, lus côté invité (même règle que la page)."""
     return js("const s=(window.GuestStay.snapshot()||{}).stay||{}; if(!(Number(s.adults)>0)) return 0;"
@@ -1016,14 +1024,14 @@ def t_AUD2():
     check("compteur siège bébé à 0", text_of("[data-baby-count]") == "0", f"({text_of('[data-baby-count]')!r})")
     check("« − » désactivé à 0", js("const b=document.querySelector(\"[data-step='baby'][data-dir='-1']\"); return !!(b && b.disabled);"))
     hint = js("const e=document.querySelector('.baby-hint'); if(!e) return ''; const r=e.getBoundingClientRect(); return r.width>0 && r.height>0 ? e.textContent.trim() : '(cachée)';")
-    check("ligne « 50 MAD le siège » visible", hint == "50 MAD le siège", f"({hint!r})")
+    check("ligne « 50 MAD le siège » visible", norm(hint) == "50 MAD le siège", f"({hint!r})")
     t0, txt0 = price_total()
     tap("[data-step='baby'][data-dir='1']", guard=True)
     check("« + » au vrai toucher → 1 siège", text_of("[data-baby-count]") == "1", f"({text_of('[data-baby-count]')!r})")
     t1, txt1 = price_total()
-    check("total + 50 MAD", t0 is not None and t1 == t0 + 50 and "MAD" in txt1, f"({txt0!r} → {txt1!r})")
+    check("total + 50 MAD", t0 is not None and t1 == t0 + 50 and "MAD" in norm(txt1), f"({txt0!r} → {txt1!r})")
     brk = text_of("[data-transfer-form] [data-price-break]") or ""
-    check("détail « 1 siège bébé 50 MAD »", "1 siège bébé 50 MAD" in brk, f"({brk!r})")
+    check("détail « 1 siège bébé 50 MAD »", "1 siège bébé 50 MAD" in norm(brk), f"({brk!r})")
     shot("AUD2-siege-bebe-1")
     layout_ok("Transfert siège bébé")
 
@@ -1132,7 +1140,7 @@ def t_AUD8():
     go("/guest/recap.html")
     stay_ready()
     time.sleep(2)
-    rate = (text_of(".recap-rate") or "").replace("\u00a0", " ")
+    rate = norm(text_of(".recap-rate"))
     check("récap : « 1 € = 10 MAD »", "1 € = 10 MAD" in rate, f"({rate!r})")
     bill = js("return [...document.querySelectorAll('[data-bill] li, [data-paid] li, [data-settled-lines] li')].map(e=>e.innerText).join(' | ');") or ""
     main = js("return document.querySelector('main').innerText;")
@@ -1140,11 +1148,210 @@ def t_AUD8():
     if not bill.strip():
         note("AUD8 : récapitulatif démo vide (aucune ligne), « soit … MAD » non vérifiable : documenté, pas un échec")
     else:
-        b = bill.replace("\u00a0", " ")
+        b = norm(bill)
         check("récap : montants en €", "€" in b, f"({b[:120]!r})")
-        check("récap : « soit … MAD »", bool(__import__("re").search(r"soit [\d  ]+ MAD", main.replace("\u00a0", " "))), f"({main[:160]!r})")
+        check("récap : « soit … MAD »", bool(__import__("re").search(r"soit [\d ]+ MAD", norm(main))), f"({main[:160]!r})")
     shot("AUD8-02-recap")
     layout_ok("Récapitulatif")
+
+
+# ---------------------------------------------------------------- nouveau design (invité, 0 envoi, 0 admin)
+# Critères : specs « § 10 Critères d'acceptation (iPhone 16 et SE) » de La Villa v2h, Wi-Fi & TV v3c,
+# Loisirs v3d, Nos adresses v3b. Mesures dans le DOM réel de Safari ; captures pour le jugement visuel.
+SCREEN_JS = """
+const s=document.querySelector('.screen'), nav=document.querySelector('.nav, .bottom-nav'), act=document.querySelector('.action');
+const navTop = nav ? nav.getBoundingClientRect().top : window.innerHeight;
+const fonts=[...document.querySelectorAll('main *')].filter(e=>e.offsetParent && e.childNodes.length && [...e.childNodes].some(n=>n.nodeType===3 && n.data.trim())).map(e=>parseFloat(getComputedStyle(e).fontSize));
+const one=[...document.querySelectorAll('[data-one]')].filter(e=>e.offsetParent).filter(e=>{const r=document.createRange(); r.selectNodeContents(e); const rects=[...r.getClientRects()].filter(x=>x.width>0); const tops=new Set(rects.map(x=>Math.round(x.top))); return tops.size>1;}).map(e=>e.textContent.trim().slice(0,30));
+return {screenScroll: s ? s.scrollHeight - s.clientHeight : null, scrollTop: s ? s.scrollTop : null,
+        hOverflow: document.documentElement.scrollWidth - window.innerWidth, navTop: navTop,
+        actionTop: act ? act.getBoundingClientRect().top : null, innerH: window.innerHeight,
+        fontMin: fonts.length ? Math.min.apply(null, fonts) : null, titresSurPlusieursLignes: one,
+        scale: window.visualViewport ? window.visualViewport.scale : 1};
+"""
+
+
+def screen_metrics(tag):
+    m = js(SCREEN_JS)
+    results["tests"][CUR["id"]].setdefault("mesures", {})[tag] = m
+    return m
+
+
+def no_hscroll(tag, m):
+    check(f"{tag} : aucun débordement horizontal", (m.get("hOverflow") or 0) <= 1, f"({m.get('hOverflow')} px)")
+
+
+def go_page(path):
+    go(path)
+    wait_js("document.fonts ? document.fonts.status === 'loaded' : true", 15, "polices chargées")
+    time.sleep(0.8)
+
+
+OPEN_SEC_JS = """
+const open=[...document.querySelectorAll('.guide-list details')].filter(d=>d.open);
+const el=open[0]; if(!el) return {open: 0};
+const nav=document.querySelector('.nav, .bottom-nav'), stick=document.querySelector('.stick');
+const body=el.querySelector('.guide-body'), last=body ? body.lastElementChild : null;
+return {open: open.length, sec: el.getAttribute('data-sec'),
+        sousBarre: last && nav ? Math.max(0, Math.round(last.getBoundingClientRect().bottom - nav.getBoundingClientRect().top)) : null,
+        titreCouvert: stick ? Math.max(0, Math.round(stick.getBoundingClientRect().bottom - el.querySelector('summary').getBoundingClientRect().top)) : 0};
+"""
+
+
+def t_DES1():
+    go_page("/guest/villa.html")
+    n = js("return document.querySelectorAll('.guide-list details').length;")
+    check("La Villa : 10 sections", n == 10, f"({n})")
+    m = screen_metrics("ferme")
+    check("liste fermée : aucun défilement de l'écran", (m.get("screenScroll") or 0) <= 1, f"({m.get('screenScroll')} px)")
+    no_hscroll("liste fermée", m)
+    shot("DES1-01-liste-fermee")
+    for sec, name, tag in (("quotidien", "Au quotidien", "DES1-02-au-quotidien"), ("depart", "Votre départ", "DES1-03-votre-depart")):
+        tap(f".guide-list details[data-sec='{sec}'] > summary", guard=True)
+        wait_js(f"document.querySelector(\".guide-list details[data-sec='{sec}']\").open", 10, f"« {name} » ouvert")
+        time.sleep(1.2)  # place() (requestAnimationFrame) puis défilement
+        o = js(OPEN_SEC_JS)
+        results["tests"][CUR["id"]].setdefault("mesures", {})[sec] = o
+        check(f"« {name} » : une seule section ouverte", o.get("open") == 1 and o.get("sec") == sec, f"({o})")
+        check(f"« {name} » : texte ouvert au-dessus de la barre du bas", (o.get("sousBarre") or 0) <= 1, f"({o.get('sousBarre')} px sous la barre)")
+        check(f"« {name} » : titre non recouvert par l'en-tête", (o.get("titreCouvert") or 0) <= 1, f"({o.get('titreCouvert')} px)")
+        no_hscroll(f"« {name} »", screen_metrics(sec))
+        shot(tag)
+
+
+def t_DES2():
+    go_page("/guest/wifi.html")
+    wait_js("document.querySelector('[data-wifi-qr-svg] svg, [data-wifi-qr-svg] canvas, [data-wifi-qr-svg] img')", 15, "QR affiché")
+    qr = js("const b=document.querySelector('[data-wifi-qr-svg]'); const g=b.querySelector('svg, canvas, img'); const r=g.getBoundingClientRect();"
+            "return {tag: g.tagName.toLowerCase(), w: Math.round(r.width), h: Math.round(r.height), modules: g.tagName.toLowerCase()==='svg' ? g.querySelectorAll('rect, path').length : null};")
+    results["tests"][CUR["id"]]["mesures"] = {"qr": qr}
+    check("QR présent et non vide", qr.get("w", 0) > 40 and qr.get("h", 0) > 40 and (qr.get("modules") is None or qr["modules"] > 0), f"({qr})")
+    net = norm(text_of("[data-wifi-network]"))
+    check("nom du réseau affiché", bool(net))
+    m = screen_metrics("page")
+    check("Wi-Fi : aucun défilement de l'écran", (m.get("screenScroll") or 0) <= 1, f"({m.get('screenScroll')} px)")
+    under = js("const nav=document.querySelector('.nav, .bottom-nav'); const last=document.querySelector('.wf-block'); return nav && last ? Math.max(0, Math.round(last.getBoundingClientRect().bottom - nav.getBoundingClientRect().top)) : null;")
+    check("Wi-Fi : contenu au-dessus de la barre", (under or 0) <= 1, f"({under} px)")
+    no_hscroll("Wi-Fi", m)
+    shot("DES2-wifi-tv")
+
+
+def t_DES3():
+    go_page("/guest/loisirs.html")
+    tiles = js("const nav=document.querySelector('.nav, .bottom-nav'); const nt=nav ? nav.getBoundingClientRect().top : innerHeight;"
+               "return [...document.querySelectorAll('.tiles .tile')].map(t=>{const r=t.getBoundingClientRect(); return {w: Math.round(r.width), h: Math.round(r.height), rogne: r.top < 0 || r.bottom > nt + 1 || r.left < 0 || r.right > innerWidth + 1 || t.scrollHeight > t.clientHeight + 1};});")
+    results["tests"][CUR["id"]]["mesures"] = {"cartes": tiles}
+    check("Loisirs : 8 cartes", len(tiles) == 8, f"({len(tiles)})")
+    check("aucune carte rognée", not any(t["rogne"] for t in tiles), f"({[i + 1 for i, t in enumerate(tiles) if t['rogne']]})")
+    m = screen_metrics("page")
+    check("Loisirs : aucun défilement de l'écran", (m.get("screenScroll") or 0) <= 1, f"({m.get('screenScroll')} px)")
+    no_hscroll("Loisirs", m)
+    shot("DES3-loisirs")
+
+
+def t_DES4():
+    go_page("/guest/marrakech.html")
+    m = screen_metrics("ferme")
+    check("accordéon fermé : aucun défilement de l'écran", (m.get("screenScroll") or 0) <= 1, f"({m.get('screenScroll')} px)")
+    no_hscroll("fermé", m)
+    shot("DES4-01-ferme")
+    btns = js("return [...document.querySelectorAll('a, button')].filter(e=>/Réserver un chauffeur/.test(e.textContent)).map(e=>e.getAttribute('href'));")
+    check("un seul « Réserver un chauffeur » vers transfert.html#ville", len(btns) == 1 and (btns[0] or "").endswith("transfert.html#ville"), f"({btns})")
+    tap("#btn-medina", guard=True)
+    wait_js("document.querySelector('#btn-medina').getAttribute('aria-expanded') === 'true' && !document.querySelector('#p-medina').hidden", 10, "« La médina » ouverte")
+    opened = js("return document.querySelectorAll(\".acc-btn[aria-expanded='true']\").length;")
+    check("un seul panneau ouvert", opened == 1, f"({opened})")
+    js("const s=document.querySelector('.screen'); s.scrollTop = s.scrollHeight;")  # en bas de défilement
+    time.sleep(1)
+    under = js("const lim=Math.min((document.querySelector('.action')||{getBoundingClientRect:()=>({top:innerHeight})}).getBoundingClientRect().top,"
+               "(document.querySelector('.nav, .bottom-nav')||{getBoundingClientRect:()=>({top:innerHeight})}).getBoundingClientRect().top);"
+               "const last=document.querySelector('#p-medina .sec-body').lastElementChild; return Math.max(0, Math.round(last.getBoundingClientRect().bottom - lim));")
+    mo = screen_metrics("medina-bas")
+    check("médina en bas : contenu au-dessus du bouton et de la barre", (under or 0) <= 1, f"({under} px)")
+    no_hscroll("médina ouverte", mo)
+    shot("DES4-02-medina-bas")
+    tap(".action a.btn", guard=True)
+    wait_js("/transfert\\.html$/.test(location.pathname) && location.hash === '#ville'", 15, "transfert.html#ville ouvert")
+    on_vercel_login()
+    hide_toolbar()
+    wait_js("(document.querySelector(\"[data-show='city']\")||{getAttribute:()=>null}).getAttribute('aria-selected') === 'true'", 15, "onglet En ville actif")
+    check("transfert : onglet « En ville » actif", True)
+    shot("DES4-03-transfert-en-ville")
+
+
+def webview_id():
+    native()
+    try:
+        els = d.find_elements(AppiumBy.CLASS_NAME, "XCUIElementTypeWebView")
+        return els[0].id if els else None
+    finally:
+        web()
+
+
+def try_zoom():
+    """Zoom réel dans Safari : pincement XCUITest, sinon double-toucher. Renvoie (échelle, moyen)."""
+    s0 = scale() or 1
+    wid = webview_id()
+    for how, cmd, args in (("pincement", "mobile: pinch", {"scale": 3.0, "velocity": 2.5}),
+                           ("double-toucher", "mobile: doubleTap", {})):
+        if not wid:
+            break
+        native()
+        try:
+            d.execute_script(cmd, dict(args, elementId=wid))
+        except Exception as e:  # noqa: BLE001
+            log(f"zoom {how} indisponible ({type(e).__name__})")
+        finally:
+            web()
+        time.sleep(1.5)
+        s1 = scale() or 1
+        if s1 > s0 * 1.2:
+            return s1, how
+    return scale() or 1, "aucun"
+
+
+def unzoom():
+    wid = webview_id()
+    for _ in range(3):
+        if (scale() or 1) <= 1.05 or not wid:
+            return
+        native()
+        try:
+            d.execute_script("mobile: pinch", {"elementId": wid, "scale": 0.2, "velocity": -3.0})
+        except Exception:  # noqa: BLE001
+            pass
+        finally:
+            web()
+        time.sleep(1.2)
+
+
+def t_DES5():
+    go_page("/guest/massage.html")
+    tap("[data-brochure-open]", guard=True)
+    wait_js("(()=>{const d=document.querySelector('[data-brochure]'); return d && (d.open || !d.hidden);})()", 15, "visionneuse ouverte")
+    wait_js("[...document.querySelectorAll('[data-brochure] img')].every(i=>i.complete && i.naturalWidth>0)", 30, "4 pages chargées")
+    imgs = js("return [...document.querySelectorAll('[data-brochure] img')].map(i=>({naturel: i.naturalWidth, affiche: Math.round(i.getBoundingClientRect().width)}));")
+    pages = []
+    for i in range(1, len(imgs) + 1):
+        if i > 1:
+            tap("[data-brochure-go='1']", guard=True)
+            wait_js(f"(document.querySelector('[data-brochure-live]')||{{}}).textContent === 'Page {i} sur 4'", 10, f"page {i}")
+        time.sleep(0.6)
+        z, how = try_zoom()
+        im = imgs[i - 1]
+        # pixels d'écran (points CSS × échelle) par pixel de l'image d'origine
+        rendu = round(im["affiche"] * z / im["naturel"], 3) if im["naturel"] else None
+        pages.append({"page": i, "largeur_naturelle_px": im["naturel"], "largeur_affichee_px": im["affiche"], "zoom": round(z, 2), "moyen": how, "points_par_px_image": rendu})
+        shot(f"DES5-0{i}-page-{i}-zoom")
+        unzoom()
+    results["tests"][CUR["id"]]["mesures"] = {"pages": pages}
+    note("DES5 : " + "; ".join(f"p{p['page']} {p['largeur_naturelle_px']} px, zoom ×{p['zoom']} ({p['moyen']})" for p in pages))
+    check("4 pages de brochure", len(pages) == 4, f"({len(pages)})")
+    check("zoom obtenu sur au moins une page", any(p["zoom"] > 1.2 for p in pages), f"({[(p['page'], p['zoom'], p['moyen']) for p in pages]})")
+    try:
+        tap("[data-brochure-close]", guard=True)
+    except Exception as e:  # noqa: BLE001
+        note(f"DES5 : fermeture de la visionneuse non faite ({type(e).__name__})")
 
 
 def t_restore_demo():
@@ -1228,7 +1435,12 @@ def main():
                      "AUD4": ("audit 4 : Contacts utiles sans « depuis un fixe » ni sous-titre WhatsApp", t_AUD4),
                      "AUD5": ("audit 5 : format-detection, aucun numéro lié par Safari", t_AUD5),
                      "AUD6": ("audit 6 : brochure du spa (visionneuse, Fermer, retour, sélection conservée)", t_AUD6),
-                     "AUD8": ("audit 8 : MAD sur les services, récap en € « soit … MAD »", t_AUD8)}
+                     "AUD8": ("audit 8 : MAD sur les services, récap en € « soit … MAD »", t_AUD8),
+                     "DES1": ("design : La Villa, accordéon (Au quotidien, Votre départ)", t_DES1),
+                     "DES2": ("design : Wi-Fi & TV (QR local, réseau, un seul écran)", t_DES2),
+                     "DES3": ("design : Loisirs (8 cartes, un seul écran)", t_DES3),
+                     "DES4": ("design : Nos adresses (La médina, Réserver un chauffeur → En ville)", t_DES4),
+                     "DES5": ("design : brochure du spa zoomée (lisibilité)", t_DES5)}
             for tid in ONLY_OK:
                 if tid in ONLY:
                     run(tid, table[tid][0], table[tid][1])
