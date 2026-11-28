@@ -4,9 +4,6 @@ name: Parcours E2E staging (vrai Safari iOS)
 # tout vient des secrets E2E_* (supprimés après chaque campagne).
 # Ne publie sur AUCUNE branche : seulement des artefacts conservés 1 jour.
 on:
-  # TEMPORAIRE (dernier run du 28/11) : retiré juste après
-  push:
-    branches: [e2e-staging]
   workflow_dispatch:
     inputs:
       runner:

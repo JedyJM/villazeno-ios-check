@@ -404,7 +404,7 @@ def bar_rects():
 def mask_text_in_page():
     """Noircit dans la page tout texte contenant le nom d'hôte ou une clé (fiche séjour admin)."""
     js("const h=arguments[0]; const w=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT); let n;"
-       "while((n=w.nextNode())){ const t=n.data||''; if((h && t.indexOf(h)>=0) || /[?&]k=/.test(t)){"
+       "while((n=w.nextNode())){ const t=n.data||''; if((h && t.indexOf(h)>=0) || /[?&]k=/.test(t) || /script\\.google(usercontent)?\\.com|macros\\/s\\//.test(t)){"
        " const p=n.parentElement; if(p){ p.style.background='#000'; p.style.color='#000'; } } }", HOST)
 
 
@@ -571,15 +571,13 @@ def t_setup():
     cur = d.current_url or ""
     if "_vercel_share" in cur:
         note("après le lien de partage, l'adresse contient encore le jeton : navigation immédiate ailleurs, aucune capture prise")
-    d.get(BASE + "/api/vz-env")
-    time.sleep(1.5)
-    on_vercel_login()
-    txt = js("return document.body ? document.body.innerText : '';") or ""
-    try:
-        env2 = json.loads(txt)
-    except Exception:  # noqa: BLE001
-        env2 = {}
-    check("Safari : /api/vz-env chauffé et « staging »", env2.get("env") == "staging", "(page d'accès Vercel ?)")
+    # Contrôle par fetch depuis une page de l'aperçu : la réponse JSON brute (qui contient le /exec)
+    # n'est jamais affichée à l'écran, donc jamais capturée.
+    go("/guest/acces.html")
+    env2 = d.execute_async_script(
+        "const done=arguments[arguments.length-1];"
+        "fetch('/api/vz-env',{cache:'no-store'}).then(r=>r.json()).then(j=>done({env:j.env, same:j.execUrl===arguments[0]}), e=>done({err:String(e)}));", EXEC) or {}
+    check("Safari : /api/vz-env chauffé et « staging »", env2.get("env") == "staging" and env2.get("same"), f"({red(env2)})")
     # Le séjour : posé dans le localStorage comme le fait la page avec ?stay=&k= (la clé n'apparaît jamais dans l'adresse).
     go("/guest/acces.html")
     js("localStorage.setItem('villazeno.stay', arguments[0]); localStorage.setItem('villazeno.stayKey', arguments[1]);", DEMO, GUEST_K)
