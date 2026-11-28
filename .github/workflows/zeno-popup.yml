@@ -1,11 +1,19 @@
 name: Vérification pop-up ZENO2027
 
 on:
+  # workflow_dispatch n'est exposé par l'API que si le fichier est sur la branche
+  # par défaut ; on déclenche donc aussi au push de cette branche dédiée.
+  push:
+    branches: [zeno-popup-check]
+    paths:
+      - ".github/workflows/zeno-popup.yml"
+      - "scripts/zeno_popup_check.py"
+      - "scripts/select_zeno_device.py"
   workflow_dispatch:
     inputs:
       base_url:
-        description: "Adresse de la preview (sans ?zeno=1)"
-        required: true
+        description: "Adresse de la preview (sans ?zeno=1). Vide = preview du commit 0626d5c."
+        required: false
         type: string
       runner:
         description: "Machine GitHub"
@@ -70,7 +78,12 @@ jobs:
 
       - name: Adresse de la preview
         run: |
-          echo "BASE_URL=${{ inputs.base_url }}" >> "$GITHUB_ENV"
+          URL="${{ inputs.base_url }}"
+          if [ -z "$URL" ]; then
+            URL="https://villazenomarrakech-1xpe78jux-jalilmoumni-4572.vercel.app"
+          fi
+          echo "BASE_URL=$URL" >> "$GITHUB_ENV"
+          echo "Preview : $URL"
 
       - name: Démarrer Appium
         run: |
