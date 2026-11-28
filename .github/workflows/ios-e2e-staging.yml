@@ -1,0 +1,101 @@
+name: Parcours E2E staging (vrai Safari iOS)
+
+# Lancement à la main uniquement. Aucune adresse, clé ni jeton en entrée :
+# tout vient des secrets E2E_* (supprimés après chaque campagne).
+# Ne publie sur AUCUNE branche : seulement des artefacts conservés 1 jour.
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: "Machine GitHub (macos-15 ou macos-15-intel si file d'attente)"
+        required: false
+        default: "macos-15-intel"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-e2e-staging
+  cancel-in-progress: false
+
+jobs:
+  ios:
+    runs-on: ${{ inputs.runner || 'macos-15-intel' }}
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        size: [big, small]   # big = iPhone 15/16 (ou le plus proche), small = iPhone SE
+    env:
+      SIZE: ${{ matrix.size }}
+      OUT: results
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Installer Appium, le pilote iOS et Pillow
+        run: |
+          npm install -g appium@latest
+          appium --version
+          appium driver install xcuitest
+          python3 -m pip install --break-system-packages --ignore-installed "Appium-Python-Client>=4" pillow
+
+      - name: Choisir l'iPhone simulé
+        run: python3 scripts/select_device.py "$SIZE"
+
+      - name: Préparer et démarrer l'iPhone simulé (clavier matériel débranché)
+        run: |
+          defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
+          xcrun simctl shutdown "$UDID" || true
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Démarrer Appium
+        run: |
+          nohup appium --log-level warn --log appium.log > /dev/null 2>&1 &
+          for i in $(seq 1 30); do curl -sf -o /dev/null http://127.0.0.1:4723/status && break; sleep 2; done
+
+      - name: Parcours dans le vrai Safari iOS (staging)
+        env:
+          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+          E2E_VERCEL_SHARE: ${{ secrets.E2E_VERCEL_SHARE }}
+          E2E_GUEST_K: ${{ secrets.E2E_GUEST_K }}
+          E2E_EXEC_URL: ${{ secrets.E2E_EXEC_URL }}
+          E2E_ADMIN_TOKEN: ${{ secrets.E2E_ADMIN_TOKEN }}
+        run: |
+          set +x
+          python3 scripts/ios_e2e.py && exit 0
+          code=$?
+          # Une seule relance, et seulement si la session Appium n'a pas démarré
+          # (simulateur planté) : aucune demande n'a donc été envoyée.
+          if python3 -c "import json,sys; r=json.load(open('results/$SIZE-results.json')); sys.exit(0 if (not r.get('session') and r.get('submitted',0)==0) else 1)"; then
+            echo "Session Appium impossible : seconde tentative"
+            sleep 15
+            python3 scripts/ios_e2e.py
+          else
+            exit $code
+          fi
+
+      - name: Expurger les journaux avant artefact
+        if: always()
+        env:
+          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+          E2E_VERCEL_SHARE: ${{ secrets.E2E_VERCEL_SHARE }}
+          E2E_GUEST_K: ${{ secrets.E2E_GUEST_K }}
+          E2E_EXEC_URL: ${{ secrets.E2E_EXEC_URL }}
+        run: |
+          set +x
+          mkdir -p results
+          python3 scripts/redact.py appium.log "results/$SIZE-appium.log" results
+          echo "Exécution ${{ github.run_id }} — iPhone ${DEVICE_NAME:-inconnu} — iOS ${IOS_VERSION:-?}" > "results/$SIZE-STATUS.txt"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-${{ matrix.size }}
+          path: results/
+          retention-days: 1
+          if-no-files-found: warn
