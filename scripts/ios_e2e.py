@@ -359,9 +359,10 @@ def staging_guard():
     r = d.execute_async_script(
         "const done=arguments[arguments.length-1];"
         "if(!window.VZApi){done({ok:false,why:'VZApi absent'});return;}"
-        "const p = typeof VZApi.urlReady==='function' ? VZApi.urlReady() : Promise.resolve(VZApi.URL);"
-        "p.then(()=>done({ok:true, env:VZApi.env, prod: VZApi.URL===VZApi.PROD_URL, same: VZApi.URL===arguments[0]}))"
-        ".catch(e=>done({ok:false, why:String(e)}));", EXEC)
+        "const u=VZApi.urlReady; const p = typeof u==='function' ? u() : (u && typeof u.then==='function' ? u : Promise.resolve(VZApi.URL));"
+        "const t0=Date.now(); const fin=()=>done({ok:true, env:VZApi.env, prod: VZApi.URL===VZApi.PROD_URL, same: VZApi.URL===arguments[0]});"
+        "const poll=()=>{ if(VZApi.env==='staging' || Date.now()-t0>25000) fin(); else setTimeout(poll,500); };"
+        "p.then(poll, poll);", EXEC)
     if not (r and r.get("ok") and r.get("env") == "staging" and not r.get("prod") and r.get("same")):
         raise AssertionError(f"la page n'a pas choisi le /exec de staging ({red(r)}) : rien n'est envoyé [app : repli vers la production]")
 
