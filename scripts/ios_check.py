@@ -15,7 +15,7 @@ from appium.options.ios import XCUITestOptions
 from appium.webdriver.common.appiumby import AppiumBy
 
 BASE = os.environ.get("BASE_URL", "http://localhost:8000").rstrip("/")
-PAGES = os.environ.get("PAGES", "services.html,piscine.html,piscine-sans-chauffage.html,contacts.html,acces.html").split(",")
+PAGES = os.environ.get("PAGES", "tr-aeroport.html,tr-modifier.html,tr-ville.html,tr-location.html,exp-quad.html,exp-cheval.html,ms-massages.html,ms-mains.html,ms-epilation.html").split(",")
 OUT = os.environ.get("OUT", "results")
 LABEL = os.environ.get("SIZE", "device")
 os.makedirs(OUT, exist_ok=True)
@@ -150,7 +150,7 @@ try:
             check(page, "dessins sans chevauchement avec les textes", not m0.get("overlaps"), f"({', '.join(m0.get('overlaps') or [])})")
         results["pages"][page]["initial"] = m0
 
-        if not page.startswith(("restauration", "services", "piscine")):
+        if not page.startswith(("restauration", "services", "piscine", "tr-", "exp-", "ms-")):
             continue
         stem = page.replace(".html", "")
 
