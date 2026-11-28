@@ -24,7 +24,7 @@ concurrency:
 jobs:
   ios:
     runs-on: ${{ inputs.runner || 'macos-15-intel' }}
-    timeout-minutes: 75
+    timeout-minutes: 110
     strategy:
       fail-fast: false
       matrix:
@@ -60,9 +60,19 @@ jobs:
           xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
 
+      # WebDriverAgent construit à l'avance (même dossier DerivedData que le pilote) : la
+      # première session n'a plus à tout compiler, elle reste sous les délais d'Appium.
+      # Non bloquant ; sortie gardée dans un fichier local (jamais publié).
+      - name: Préconstruire WebDriverAgent
+        continue-on-error: true
+        timeout-minutes: 30
+        run: |
+          appium driver run xcuitest build-wda --sdk="$IOS_VERSION" --name="$DEVICE_NAME" > wda-build.log 2>&1 \
+            && echo "WebDriverAgent préconstruit" || echo "Préconstruction de WebDriverAgent impossible (non bloquant)"
+
       - name: Démarrer Appium
         run: |
-          nohup appium --log-level warn --log appium.log > /dev/null 2>&1 &
+          nohup appium --log-level warn --keep-alive-timeout 1800 --log appium.log > /dev/null 2>&1 &
           for i in $(seq 1 30); do curl -sf -o /dev/null http://127.0.0.1:4723/status && break; sleep 2; done
 
       - name: Parcours dans le vrai Safari iOS (staging)
@@ -82,8 +92,17 @@ jobs:
           # Une seule relance, et seulement si la session Appium n'a pas démarré
           # (simulateur planté) : aucune demande n'a donc été envoyée.
           if python3 -c "import json,sys; r=json.load(open('results/$SIZE-results.json')); sys.exit(0 if (not r.get('session') and r.get('submitted',0)==0) else 1)" 2>/dev/null; then
-            echo "Session Appium impossible : seconde tentative"
-            sleep 15
+            echo "Session Appium impossible : arrêt complet d'Appium et de WebDriverAgent avant la seconde tentative"
+            # Jamais deux sessions sur le même iPhone : la première (éventuellement encore en
+            # train de lancer WebDriverAgent) est tuée avec son serveur avant de recommencer.
+            pkill -f "appium" || true
+            pkill -f "xcodebuild" || true
+            pkill -f "WebDriverAgentRunner" || true
+            for i in $(seq 1 30); do pgrep -f "appium|xcodebuild" > /dev/null || break; sleep 2; done
+            [ -f appium.log ] && mv appium.log appium-1.log
+            nohup appium --log-level warn --keep-alive-timeout 1800 --log appium.log > /dev/null 2>&1 &
+            for i in $(seq 1 30); do curl -sf -o /dev/null http://127.0.0.1:4723/status && break; sleep 2; done
+            sleep 10
             python3 scripts/ios_e2e.py 2>&1 | python3 scripts/redact.py --stream
           else
             exit $code
@@ -100,6 +119,7 @@ jobs:
         run: |
           set +x
           mkdir -p results pub
+          if [ -f appium-1.log ]; then cat appium-1.log appium.log > appium-all.log 2>/dev/null; mv appium-all.log appium.log; fi
           python3 scripts/redact.py appium.log "results/$SIZE-appium.log" results > /dev/null 2>&1 || true
           # STATUS public minimal : modèle, iOS, conclusion, nombres (aucune cause)
           python3 - > "pub/$SIZE-STATUS.txt" 2>/dev/null <<'PY' || echo "statut indisponible" > "pub/$SIZE-STATUS.txt"

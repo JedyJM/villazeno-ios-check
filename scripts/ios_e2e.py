@@ -1279,26 +1279,48 @@ def t_DES4():
     shot("DES4-03-transfert-en-ville")
 
 
-def webview_id():
+def webview_rect():
     native()
     try:
         els = d.find_elements(AppiumBy.CLASS_NAME, "XCUIElementTypeWebView")
-        return els[0].id if els else None
+        return (els[0].id, els[0].rect) if els else (None, None)
     finally:
         web()
 
 
-def try_zoom():
-    """Zoom réel dans Safari : pincement XCUITest, sinon double-toucher. Renvoie (échelle, moyen)."""
+def pinch_at(x, y, spread=150):
+    """Pincement réel à deux doigts centré sur (x, y) en points d'écran (actions W3C tactiles, contexte natif)."""
+    from selenium.webdriver.remote.command import Command
+    native()
+    try:
+        w = d.get_window_size()["width"]
+        clamp = lambda v: int(max(5, min(w - 5, v)))  # noqa: E731
+        def finger(name, sx, ex):
+            return {"type": "pointer", "id": name, "parameters": {"pointerType": "touch"}, "actions": [
+                {"type": "pointerMove", "duration": 0, "x": clamp(sx), "y": int(y), "origin": "viewport"},
+                {"type": "pointerDown", "button": 0},
+                {"type": "pause", "duration": 120},
+                {"type": "pointerMove", "duration": 700, "x": clamp(ex), "y": int(y), "origin": "viewport"},
+                {"type": "pointerUp", "button": 0}]}
+        d.execute(Command.W3C_ACTIONS, {"actions": [finger("doigt1", x - 18, x - spread), finger("doigt2", x + 18, x + spread)]})
+    finally:
+        web()
+
+
+def zoom_at(css_x, css_y):
+    """Zoom réel dans Safari sur un point de la page (coordonnées CSS à l'échelle 1).
+    1) pincement à deux doigts sur ce point, 2) mobile: pinch au centre, 3) double-toucher. Renvoie (échelle, moyen)."""
     s0 = scale() or 1
-    wid = webview_id()
-    for how, cmd, args in (("pincement", "mobile: pinch", {"scale": 3.0, "velocity": 2.5}),
-                           ("double-toucher", "mobile: doubleTap", {})):
-        if not wid:
-            break
-        native()
+    wid, wr = webview_rect()
+    tries = []
+    if wr:
+        tries.append(("pincement deux doigts sur les prix", lambda: pinch_at(wr["x"] + css_x, wr["y"] + css_y)))
+    if wid:
+        tries.append(("mobile: pinch (centre)", lambda: (native(), d.execute_script("mobile: pinch", {"elementId": wid, "scale": 3.0, "velocity": 2.5}))))
+        tries.append(("double-toucher", lambda: (native(), d.execute_script("mobile: doubleTap", {"elementId": wid}))))
+    for how, act in tries:
         try:
-            d.execute_script(cmd, dict(args, elementId=wid))
+            act()
         except Exception as e:  # noqa: BLE001
             log(f"zoom {how} indisponible ({type(e).__name__})")
         finally:
@@ -1311,7 +1333,7 @@ def try_zoom():
 
 
 def unzoom():
-    wid = webview_id()
+    wid, _ = webview_rect()
     for _ in range(3):
         if (scale() or 1) <= 1.05 or not wid:
             return
@@ -1325,33 +1347,49 @@ def unzoom():
         time.sleep(1.2)
 
 
-def t_DES5():
+BROCHURE_OPEN = "(()=>{const d=document.querySelector('[data-brochure]'); return d && (d.open || !d.hidden);})()"
+
+
+def fresh_viewer(page):
+    """Visionneuse rouverte à l'échelle 1 sur la page voulue (navigation JS, sans toucher de flèche)."""
     go_page("/guest/massage.html")
-    tap("[data-brochure-open]", guard=True)
-    wait_js("(()=>{const d=document.querySelector('[data-brochure]'); return d && (d.open || !d.hidden);})()", 15, "visionneuse ouverte")
-    wait_js("[...document.querySelectorAll('[data-brochure] img')].every(i=>i.complete && i.naturalWidth>0)", 30, "4 pages chargées")
-    imgs = js("return [...document.querySelectorAll('[data-brochure] img')].map(i=>({naturel: i.naturalWidth, affiche: Math.round(i.getBoundingClientRect().width)}));")
-    pages = []
-    for i in range(1, len(imgs) + 1):
-        if i > 1:
-            tap("[data-brochure-go='1']", guard=True)
-            wait_js(f"(document.querySelector('[data-brochure-live]')||{{}}).textContent === 'Page {i} sur 4'", 10, f"page {i}")
-        time.sleep(0.6)
-        z, how = try_zoom()
-        im = imgs[i - 1]
-        # pixels d'écran (points CSS × échelle) par pixel de l'image d'origine
-        rendu = round(im["affiche"] * z / im["naturel"], 3) if im["naturel"] else None
-        pages.append({"page": i, "largeur_naturelle_px": im["naturel"], "largeur_affichee_px": im["affiche"], "zoom": round(z, 2), "moyen": how, "points_par_px_image": rendu})
-        shot(f"DES5-0{i}-page-{i}-zoom")
+    if (scale() or 1) > 1.05:
         unzoom()
+    if (scale() or 1) > 1.05:  # zoom conservé par Safari : on passe par une autre page
+        go_page("/guest/acces.html")
+        go_page("/guest/massage.html")
+    if (scale() or 1) > 1.05:
+        raise AssertionError(f"impossible de revenir à l'échelle 1 (×{scale()}) avant la page {page}")
+    tap("[data-brochure-open]", guard=True)
+    wait_js(BROCHURE_OPEN, 15, "visionneuse ouverte")
+    wait_js("[...document.querySelectorAll('[data-brochure] img')].every(i=>i.complete && i.naturalWidth>0)", 30, "4 pages chargées")
+    js("const el=document.querySelector('[data-brochure-pages]'); el.scrollTo({left: el.clientWidth*(arguments[0]-1), behavior:'instant'});", page)
+    wait_js(f"(document.querySelector('[data-brochure-live]')||{{}}).textContent === 'Page {page} sur 4'", 10, f"page {page} (navigation JS)")
+    time.sleep(0.8)
+
+
+def t_DES5():
+    """Lisibilité des pages TARIFS (2 à 4) : chaque page part de l'échelle 1, zoom sur la zone des prix."""
+    pages = []
+    for i in (2, 3, 4):
+        try:
+            fresh_viewer(i)
+            im = js("const img=document.querySelectorAll('[data-brochure] img')[arguments[0]-1]; const r=img.getBoundingClientRect();"
+                    "return {naturel: img.naturalWidth, affiche: Math.round(r.width), x: r.left + r.width*0.5, y: r.top + r.height*0.3};", i)
+            s_before = scale() or 1
+            z, how = zoom_at(im["x"], im["y"])
+            rendu = round(im["affiche"] * z / im["naturel"], 3) if im["naturel"] else None
+            pages.append({"page": i, "largeur_naturelle_px": im["naturel"], "largeur_affichee_px": im["affiche"],
+                          "echelle_avant": round(s_before, 2), "zoom": round(z, 2), "moyen": how, "points_par_px_image": rendu})
+            shot(f"DES5-0{i}-page-{i}-tarifs-zoom")
+            unzoom()
+        except Exception as e:  # noqa: BLE001  (une page ratée n'empêche pas les autres)
+            pages.append({"page": i, "erreur": red(f"{type(e).__name__}: {e}")[:200]})
+            safe_shot(f"DES5-0{i}-echec")
     results["tests"][CUR["id"]]["mesures"] = {"pages": pages}
-    note("DES5 : " + "; ".join(f"p{p['page']} {p['largeur_naturelle_px']} px, zoom ×{p['zoom']} ({p['moyen']})" for p in pages))
-    check("4 pages de brochure", len(pages) == 4, f"({len(pages)})")
-    check("zoom obtenu sur au moins une page", any(p["zoom"] > 1.2 for p in pages), f"({[(p['page'], p['zoom'], p['moyen']) for p in pages]})")
-    try:
-        tap("[data-brochure-close]", guard=True)
-    except Exception as e:  # noqa: BLE001
-        note(f"DES5 : fermeture de la visionneuse non faite ({type(e).__name__})")
+    note("DES5 : " + "; ".join(f"p{p['page']} " + (f"{p['largeur_naturelle_px']} px, ×{p['zoom']} ({p['moyen']})" if "zoom" in p else "erreur") for p in pages))
+    ok = [p for p in pages if p.get("zoom", 1) > 1.2]
+    check("pages tarifs 2 à 4 zoomées depuis l'échelle 1", len(ok) == 3, f"({[(p['page'], p.get('zoom'), p.get('moyen') or p.get('erreur')) for p in pages]})")
 
 
 def t_restore_demo():
@@ -1369,16 +1407,18 @@ def start_session():
     opts.set_capability("appium:nativeWebTap", True)
     opts.set_capability("appium:connectHardwareKeyboard", False)
     opts.set_capability("appium:forceSimulatorSoftwareKeyboardPresence", True)
-    opts.set_capability("appium:wdaLaunchTimeout", 300000)
+    opts.set_capability("appium:wdaLaunchTimeout", 600000)
+    opts.set_capability("appium:wdaStartupRetries", 2)
+    opts.set_capability("appium:wdaStartupRetryInterval", 30000)
     opts.set_capability("appium:simulatorStartupTimeout", 600000)
-    opts.set_capability("appium:wdaConnectionTimeout", 300000)
+    opts.set_capability("appium:wdaConnectionTimeout", 600000)
     opts.set_capability("appium:webviewConnectTimeout", 90000)
     opts.set_capability("appium:webviewConnectRetries", 20)
     opts.set_capability("appium:newCommandTimeout", 900)
     opts.set_capability("appium:safariIgnoreFraudWarning", True)
     try:
         from appium.webdriver.client_config import AppiumClientConfig
-        cfg = AppiumClientConfig(remote_server_addr="http://127.0.0.1:4723", timeout=900)
+        cfg = AppiumClientConfig(remote_server_addr="http://127.0.0.1:4723", timeout=1500)
         drv = webdriver.Remote(options=opts, client_config=cfg)
     except ImportError:
         drv = webdriver.Remote("http://127.0.0.1:4723", options=opts)
