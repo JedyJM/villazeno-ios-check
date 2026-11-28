@@ -7,8 +7,6 @@ name: Parcours E2E staging (vrai Safari iOS)
 # STATUS.txt minimal (modèle, iOS, conclusion, nombres pass/fail), 1 jour.
 # Journal du job : tout le stdout du test passe par scripts/redact.py --stream.
 on:
-  push:
-    branches: [e2e-staging]
   workflow_dispatch:
     inputs:
       runner:
