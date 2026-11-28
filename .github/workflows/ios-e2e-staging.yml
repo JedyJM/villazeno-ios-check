@@ -32,6 +32,9 @@ jobs:
     env:
       SIZE: ${{ matrix.size }}
       OUT: results
+      # Run du 28/11 après-midi : P0 puis A1, A2, A3 seulement (aucune remise à zéro du
+      # séjour démo, aucun envoi invité). Vide = suite complète. Pas un secret.
+      E2E_ONLY: "A1,A2,A3"
     steps:
       - uses: actions/checkout@v4
 
@@ -104,8 +107,8 @@ jobs:
           try:
               r = json.load(open(f"results/{size}-results.json"))
               st = [t.get("status") for t in r.get("tests", {}).values()]
-              concl = "pass" if st and "fail" not in st else "fail"
-              print(f"{os.environ.get('DEVICE_NAME', '?')} | iOS {os.environ.get('IOS_VERSION', '?')} | {concl} | pass {st.count('pass')} | fail {st.count('fail')} | skip {st.count('skip')} | envois {r.get('submitted', 0)}")
+              concl = "pass" if st and "fail" not in st and "blocked" not in st else "fail"
+              print(f"{os.environ.get('DEVICE_NAME', '?')} | iOS {os.environ.get('IOS_VERSION', '?')} | {concl} | pass {st.count('pass')} | fail {st.count('fail')} | bloqué {st.count('blocked')} | skip {st.count('skip')} | envois {r.get('submitted', 0)}")
           except Exception:
               print(f"{os.environ.get('DEVICE_NAME', '?')} | iOS {os.environ.get('IOS_VERSION', '?')} | résultats absents")
           PY

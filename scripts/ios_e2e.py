@@ -47,6 +47,10 @@ LABEL = os.environ.get("SIZE", "device")
 DEMO = "FAMDEMO2812"
 MAX_SENDS = 4
 MAXS = [MAX_SENDS]  # passe à 0 si le séjour démo n'est pas propre
+# E2E_ONLY (non secret, posé par le workflow) : "A1,A2,A3" = P0 puis ces tests seulement
+# (aucune remise à zéro du séjour démo, aucun envoi invité). Vide = suite complète.
+ONLY = [x.strip().upper() for x in os.environ.get("E2E_ONLY", "").split(",") if x.strip()]
+ONLY_OK = ("A1", "A2", "A3")
 os.makedirs(OUT, exist_ok=True)
 
 HOST = urllib.parse.urlparse(BASE).hostname or ""
@@ -124,6 +128,10 @@ class Skip(Exception):
     pass
 
 
+class Blocked(Exception):
+    """Préalable non prouvé (ex. barre Vercel présente) : le test ne touche à rien."""
+
+
 def run(tid, title, fn, cause_hint="à analyser"):
     CUR["id"] = tid
     t = results["tests"][tid] = {"group": tid[0], "title": title, "status": "?", "checks": [], "shots": [], "cause": ""}
@@ -135,6 +143,10 @@ def run(tid, title, fn, cause_hint="à analyser"):
     except Skip as e:
         t["status"] = "skip"
         t["cause"] = red(e)
+    except Blocked as e:
+        t["status"] = "blocked"
+        t["cause"] = "BLOQUÉ : " + red(e)[:400]
+        safe_shot(f"{tid}-bloque")
     except AssertionError as e:
         t["status"] = "fail"
         t["cause"] = red(e)[:400]
@@ -261,6 +273,26 @@ def go(path):
     d.get(BASE + path)
     time.sleep(1.5)
     on_vercel_login()
+    hide_toolbar()
+
+
+# Barre d'outils Vercel (injectée par Vercel sur les aperçus, absente en production) :
+# son script ne la monte pas si sessionStorage["vercel-live-feedback-optout"] == "1"
+# (option « Disable for session » de Vercel), ni ne la rattache. La clé vaut pour
+# l'onglet et l'origine, donc pour toute la session. En plus, à chaque page : retrait
+# de tout élément déjà monté et style qui le masque. Rien n'est changé dans l'app.
+TOOLBAR_SEL = "vercel-live-feedback, #vercel-live-feedback, [data-vercel-toolbar]"
+
+
+def hide_toolbar():
+    js("try{sessionStorage.setItem('vercel-live-feedback-optout','1');}catch(e){}"
+       "document.querySelectorAll(arguments[0]).forEach(function(e){e.remove();});"
+       "if(!document.getElementById('e2e-no-toolbar') && document.head){var s=document.createElement('style'); s.id='e2e-no-toolbar';"
+       "s.textContent='vercel-live-feedback{display:none!important;pointer-events:none!important}'; document.head.appendChild(s);}", TOOLBAR_SEL)
+
+
+def toolbar_state():
+    return js("return {barre: !!document.querySelector(arguments[0]), optout: sessionStorage.getItem('vercel-live-feedback-optout')};", TOOLBAR_SEL)
 
 
 def on_vercel_login():
@@ -283,8 +315,10 @@ def visible(sel):
     return None
 
 
-def tap(sel, timeout=15):
-    """Vrai toucher (nativeWebTap) sur le premier élément visible."""
+def tap(sel, timeout=15, guard=False):
+    """Vrai toucher (nativeWebTap) sur le premier élément visible.
+    guard=True : avant de toucher, l'élément au point touché doit être la cible
+    (rien par-dessus, ex. la barre Vercel) ; sinon BLOQUÉ, aucun toucher."""
     end = time.time() + timeout
     e = None
     while time.time() < end and e is None:
@@ -295,6 +329,11 @@ def tap(sel, timeout=15):
         raise AssertionError(f"élément introuvable : {sel}")
     js("arguments[0].scrollIntoView({block:'center', inline:'nearest'});", e)
     time.sleep(0.4)
+    if guard:
+        hit = js("var el=arguments[0], r=el.getBoundingClientRect(), h=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2);"
+                 "return h ? ((h===el || el.contains(h)) ? '' : (h.tagName||'').toLowerCase()) : 'rien';", e)
+        if hit:
+            raise Blocked(f"{sel} recouvert par <{hit}> au point de toucher : aucun toucher")
     e.click()
     time.sleep(0.6)
     return e
@@ -573,7 +612,7 @@ def t_setup():
         note("après le lien de partage, l'adresse contient encore le jeton : navigation immédiate ailleurs, aucune capture prise")
     # Contrôle par fetch depuis une page de l'aperçu : la réponse JSON brute (qui contient le /exec)
     # n'est jamais affichée à l'écran, donc jamais capturée.
-    go("/guest/acces.html")
+    go("/guest/acces.html")  # go() pose la clé « barre Vercel désactivée » pour la session
     env2 = d.execute_async_script(
         "const done=arguments[arguments.length-1];"
         "fetch('/api/vz-env',{cache:'no-store'}).then(r=>r.json()).then(j=>done({env:j.env, same:j.execUrl===arguments[0]}), e=>done({err:String(e)}));", EXEC) or {}
@@ -806,16 +845,26 @@ def t_A1():
     admin_login()
     go("/admin/nouveau.html")
     staging_guard()
+    time.sleep(4)  # laisse au script Vercel le temps de (ne pas) monter la barre
+    st = toolbar_state()
+    shot("A1-00-barre-absente")
+    if st.get("barre") or st.get("optout") != "1":
+        raise Blocked(f"barre d'outils Vercel présente ou non désactivée ({st}) : ni « + » ni « Enregistrer » touchés")
+    check("barre d'outils Vercel absente du DOM (preuve avant tout toucher)", True, f"({st})")
     type_real("[name='nom']", NOM)
     set_field("[name='telephone']", "+33 6 00 00 00 11")
     set_field("[name='arrival']", "2028-11-10")
     set_field("[name='departure']", "2028-11-14")
-    tap("[data-source='Direct']")
-    tap("[data-step='kids4to11'][data-dir='1']")
+    tap("[data-source='Direct']", guard=True)
+    tap("[data-step='kids4to11'][data-dir='1']", guard=True)
+    kids = js("const e=document.querySelector('output[data-kids4to11]'); return e ? e.textContent.trim() : null;")
+    check("« + » enfants 4–11 ans pris en compte", kids == "1", f"({kids!r})")
     set_field("[name='tarif']", "1000")
     blur_active()
     shot("A1-01-nouveau")
-    tap("[data-save]")
+    if toolbar_state().get("barre"):
+        raise Blocked("barre d'outils Vercel réapparue avant « Enregistrer » : pas de toucher")
+    tap("[data-save]", guard=True)
     wait_js("document.querySelector('.form-ok')", 60, "séjour enregistré (.form-ok)")
     s = None
     for _ in range(10):
@@ -824,6 +873,8 @@ def t_A1():
             break
         time.sleep(3)
     check("séjour créé côté serveur", s is not None)
+    # le jeton « test » ne voit QUE les séjours origine=test : sa présence le prouve ; on vérifie aussi le champ s'il est renvoyé
+    check("séjour de TEST (origine test)", s.get("origine", "test") == "test", f"(origine {s.get('origine', 'non renvoyée, implicite par le jeton test')!r})")
     A1S.update({"id": s["id"], "k": s.get("k", "")})
     mask_in_logs(A1S["k"])
     go("/admin/sejour.html?id=" + urllib.parse.quote(s["id"]))
@@ -841,7 +892,8 @@ def t_A2():
     if not A1S:
         raise Skip("A1 n'a pas créé de séjour")
     go("/admin/sejour.html?id=" + urllib.parse.quote(A1S["id"]))
-    tap("[data-stop]")
+    check("fiche ouverte = séjour créé par A1", js("return new URLSearchParams(location.search).get('id');") == A1S["id"])
+    tap("[data-stop]", guard=True)
     wait_js("/désactivé/i.test((document.querySelector('.link-until')||{}).textContent||'')", 40, "lien désactivé")
     shot("A2-01-desactive")
     go("/guest/demandes.html")  # localStorage = séjour A1
@@ -853,7 +905,8 @@ def t_A3():
     if not A1S:
         raise Skip("A1 n'a pas créé de séjour")
     go("/admin/sejour.html?id=" + urllib.parse.quote(A1S["id"]))
-    tap("[data-prolong]")
+    check("fiche ouverte = séjour créé par A1", js("return new URLSearchParams(location.search).get('id');") == A1S["id"])
+    tap("[data-prolong]", guard=True)
     wait_js("/actif jusqu/i.test((document.querySelector('.link-until')||{}).textContent||'')", 40, "lien actif jusqu'au …")
     shot("A3-prolonge")
     s = next((x for x in (exec_get({"action": "stays"}).get("stays") or []) if x.get("id") == A1S["id"]), None)
@@ -957,6 +1010,19 @@ def main():
             note("préparation en échec : aucun parcours lancé (aucun envoi)")
             return 1
         dismiss_safari_tips()
+        if ONLY:
+            ignored = [x for x in ONLY if x not in ONLY_OK]
+            if ignored:
+                note(f"E2E_ONLY : {ignored} non pris en charge, ignorés (seuls {list(ONLY_OK)})")
+            note(f"mode E2E_ONLY={','.join(ONLY)} : aucune remise à zéro du séjour démo, aucun envoi invité")
+            MAXS[0] = 0
+            table = {"A1": ("admin : créer un séjour de test, convives préremplis côté invité", t_A1),
+                     "A2": ("admin : Désactiver le lien → refusé côté invité", t_A2),
+                     "A3": ("admin : Prolonger le lien", t_A3)}
+            for tid in ONLY_OK:
+                if tid in ONLY:
+                    run(tid, table[tid][0], table[tid][1])
+            return 0
         if LABEL == "big":
             run("R0", "remise à zéro du séjour démo (annule les anciennes demandes, efface l'encaissement)", t_reset, "backend/harnais")
         else:
@@ -1004,6 +1070,6 @@ def main():
 
 if __name__ == "__main__":
     code = main()
-    fails = [k for k, v in results["tests"].items() if v["status"] == "fail"]
+    fails = [k for k, v in results["tests"].items() if v["status"] in ("fail", "blocked")]
     log(f"\nEnvois : {results['submitted']} / {MAX_SENDS} — échecs : {fails or 'aucun'}")
     sys.exit(code if code else (1 if fails else 0))
