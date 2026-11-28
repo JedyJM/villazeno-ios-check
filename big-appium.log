@@ -1,0 +1,19 @@
+2026-11-28 06:49:18:770 [0f8401db][XCUITestDriver@0755] Reset: failed to terminate Simulator application with id "com.apple.mobilesafari"
+2026-11-28 06:59:26:673 [408128f2][XCUITestDriver@0755] Session '408128f2-010b-4c13-b8a1-82f5c23f158a' is starting on udid '841E0288-2704-4A18-A304-BF477CA384A8', which is already in use by another session identified by 0f8401db-8351-4782-a23b-427775eedcef. Running multiple parallel sessions on the same device is highly discouraged. Consider enabling the Appium server's '--session-override' flag and make sure to properly quit the previous session before starting a new one. Terminating the obsolete session.
+2026-11-28 06:59:26:973 [408128f2][XCUITestDriver@4051] Reset: failed to terminate Simulator application with id "com.apple.mobilesafari"
+2026-11-28 07:02:22:760 [0f8401db][XCUITestDriver@0755] Unable to start WebDriverAgent: Error: We were not able to retrieve the /status response from the WebDriverAgent server after 300000ms timeout.Try to increase the value of 'appium:wdaLaunchTimeout' capability as a possible workaround.
+2026-11-28 07:02:32:780 [0f8401db][XCUITestDriver@0755] Error: WebDriverAgent is not initialized
+    at get wda (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/driver.js:322:19)
+    at quitAndThrow (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/commands/wda/startup.js:344:18)
+    at handleLaunchFailure (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/commands/wda/startup.js:229:11)
+    at file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/commands/wda/startup.js:187:19
+    at async wrapped (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/node_modules/asyncbox/build/lib/time/retry.js:40:19)
+    at async retry (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/node_modules/asyncbox/build/lib/time/retry.js:15:19)
+    at async retryInterval (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/node_modules/asyncbox/build/lib/time/retry.js:51:12)
+    at async runStartupWithRetries (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/commands/wda/startup.js:177:5)
+    at async startUnderSynchronizationLock (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/commands/wda/startup.js:128:5)
+    at async Acquisition.<anonymous> (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/commands/wda/startup.js:22:9)
+2026-11-28 07:02:34:535 [0f8401db][Xcode] xcodebuild exited with code 'null' and signal 'SIGTERM'
+2026-11-28 07:04:13:529 [408128f2][XCUITestDriver@4051] Unable to do simple native web tap. Attempting to convert coordinates
+2026-11-28 07:05:27:055 [408128f2][XCUITestDriver@4051] Unable to do simple native web tap. Attempting to convert coordinates
+2026-11-28 07:06:03:310 [408128f2][XCUITestDriver@4051] Unable to do simple native web tap. Attempting to convert coordinates

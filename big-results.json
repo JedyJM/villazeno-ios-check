@@ -1,0 +1,861 @@
+{
+ "device": "iPhone 16",
+ "ios": "26.2",
+ "pages": {
+  "tr-aeroport.html": {
+   "checks": [
+    {
+     "check": "tient sur un écran",
+     "ok": true,
+     "detail": "(page 695 px, écran 695 px)"
+    },
+    {
+     "check": "pas de zoom au chargement",
+     "ok": true,
+     "detail": "(échelle None, zoom 1)"
+    },
+    {
+     "check": "pas de zoom après + / −",
+     "ok": true,
+     "detail": "(échelle None, zoom 1)"
+    },
+    {
+     "check": "clavier iOS ouvert",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "check": "pas de zoom en tapant",
+     "ok": true,
+     "detail": "(échelle None, zoom 1)"
+    },
+    {
+     "check": "champ Allergies visible au-dessus du clavier",
+     "ok": true,
+     "detail": "(champ 157–227, zone visible 272–657)"
+    },
+    {
+     "check": "champ et bouton ne se chevauchent pas",
+     "ok": true,
+     "detail": "(écart 58 px)"
+    },
+    {
+     "check": "clavier fermé après sortie du champ",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "check": "pas de zoom après sortie du champ",
+     "ok": true,
+     "detail": "(échelle None, zoom 1)"
+    },
+    {
+     "check": "barre du bas revenue exactement à sa place",
+     "ok": true,
+     "detail": "(avant 634–695, après 634–695)"
+    },
+    {
+     "check": "page revenue en haut (pas de décalage)",
+     "ok": true,
+     "detail": "(décalage 0 px)"
+    }
+   ],
+   "initial": {
+    "scrollH": 695,
+    "innerH": 695,
+    "innerW": 393,
+    "scrollY": 0,
+    "vvH": 695,
+    "vvTop": 0,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 634,
+     "width": 393,
+     "height": 61,
+     "top": 634,
+     "right": 393,
+     "bottom": 695,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 429.109375,
+     "width": 353,
+     "height": 69.5,
+     "top": 429.109375,
+     "right": 373,
+     "bottom": 498.609375,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 557,
+     "width": 353,
+     "height": 48,
+     "top": 557,
+     "right": 373,
+     "bottom": 605,
+     "left": 20
+    },
+    "active": "",
+    "debord": [],
+    "overlaps": []
+   },
+   "apres_plus_moins": {
+    "scrollH": 695,
+    "innerH": 695,
+    "innerW": 393,
+    "scrollY": 0,
+    "vvH": 695,
+    "vvTop": 0,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 634,
+     "width": 393,
+     "height": 61,
+     "top": 634,
+     "right": 393,
+     "bottom": 695,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 429.109375,
+     "width": 353,
+     "height": 69.5,
+     "top": 429.109375,
+     "right": 373,
+     "bottom": 498.609375,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 557,
+     "width": 353,
+     "height": 48,
+     "top": 557,
+     "right": 373,
+     "bottom": 605,
+     "left": 20
+    },
+    "active": "",
+    "debord": [],
+    "overlaps": []
+   },
+   "clavier": {
+    "scrollH": 695,
+    "innerH": 423,
+    "innerW": 393,
+    "scrollY": 272,
+    "vvH": 385,
+    "vvTop": 271.65625,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 362,
+     "width": 393,
+     "height": 61,
+     "top": 362,
+     "right": 393,
+     "bottom": 423,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 157.109375,
+     "width": 353,
+     "height": 69.5,
+     "top": 157.109375,
+     "right": 373,
+     "bottom": 226.609375,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 285,
+     "width": 353,
+     "height": 48,
+     "top": 285,
+     "right": 373,
+     "bottom": 333,
+     "left": 20
+    },
+    "active": "note2 gap",
+    "debord": [],
+    "overlaps": []
+   },
+   "defilement": {
+    "scrollH": 695,
+    "innerH": 695,
+    "innerW": 393,
+    "scrollY": 0,
+    "vvH": 385,
+    "vvTop": 0,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 634,
+     "width": 393,
+     "height": 61,
+     "top": 634,
+     "right": 393,
+     "bottom": 695,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 429.109375,
+     "width": 353,
+     "height": 69.5,
+     "top": 429.109375,
+     "right": 373,
+     "bottom": 498.609375,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 557,
+     "width": 353,
+     "height": 48,
+     "top": 557,
+     "right": 373,
+     "bottom": 605,
+     "left": 20
+    },
+    "active": "note2 gap",
+    "debord": [],
+    "overlaps": []
+   },
+   "sortie": {
+    "scrollH": 695,
+    "innerH": 695,
+    "innerW": 393,
+    "scrollY": 0,
+    "vvH": 695,
+    "vvTop": 0,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 634,
+     "width": 393,
+     "height": 61,
+     "top": 634,
+     "right": 393,
+     "bottom": 695,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 429.109375,
+     "width": 353,
+     "height": 69.5,
+     "top": 429.109375,
+     "right": 373,
+     "bottom": 498.609375,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 557,
+     "width": 353,
+     "height": 48,
+     "top": 557,
+     "right": 373,
+     "bottom": 605,
+     "left": 20
+    },
+    "active": "",
+    "debord": [],
+    "overlaps": []
+   }
+  },
+  "tr-modifier.html": {
+   "checks": [
+    {
+     "check": "tient sur un écran",
+     "ok": true,
+     "detail": "(page 695 px, écran 695 px)"
+    },
+    {
+     "check": "pas de zoom au chargement",
+     "ok": true,
+     "detail": "(échelle None, zoom 1)"
+    },
+    {
+     "check": "pas de zoom après + / −",
+     "ok": true,
+     "detail": "(échelle None, zoom 1)"
+    },
+    {
+     "check": "clavier iOS ouvert",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "check": "pas de zoom en tapant",
+     "ok": true,
+     "detail": "(échelle None, zoom 1)"
+    },
+    {
+     "check": "champ Allergies visible au-dessus du clavier",
+     "ok": true,
+     "detail": "(champ 157–227, zone visible 280–665)"
+    },
+    {
+     "check": "champ et bouton ne se chevauchent pas",
+     "ok": true,
+     "detail": "(écart 50 px)"
+    },
+    {
+     "check": "clavier fermé après sortie du champ",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "check": "pas de zoom après sortie du champ",
+     "ok": true,
+     "detail": "(échelle None, zoom 1)"
+    },
+    {
+     "check": "barre du bas revenue exactement à sa place",
+     "ok": true,
+     "detail": "(avant 634–695, après 634–695)"
+    },
+    {
+     "check": "page revenue en haut (pas de décalage)",
+     "ok": true,
+     "detail": "(décalage 0 px)"
+    }
+   ],
+   "initial": {
+    "scrollH": 695,
+    "innerH": 695,
+    "innerW": 393,
+    "scrollY": 0,
+    "vvH": 695,
+    "vvTop": 0,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 634,
+     "width": 393,
+     "height": 61,
+     "top": 634,
+     "right": 393,
+     "bottom": 695,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 437.109375,
+     "width": 353,
+     "height": 69.5,
+     "top": 437.109375,
+     "right": 373,
+     "bottom": 506.609375,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 557,
+     "width": 353,
+     "height": 48,
+     "top": 557,
+     "right": 373,
+     "bottom": 605,
+     "left": 20
+    },
+    "active": "",
+    "debord": [],
+    "overlaps": []
+   },
+   "apres_plus_moins": {
+    "scrollH": 695,
+    "innerH": 695,
+    "innerW": 393,
+    "scrollY": 0,
+    "vvH": 695,
+    "vvTop": 0,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 634,
+     "width": 393,
+     "height": 61,
+     "top": 634,
+     "right": 393,
+     "bottom": 695,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 437.109375,
+     "width": 353,
+     "height": 69.5,
+     "top": 437.109375,
+     "right": 373,
+     "bottom": 506.609375,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 557,
+     "width": 353,
+     "height": 48,
+     "top": 557,
+     "right": 373,
+     "bottom": 605,
+     "left": 20
+    },
+    "active": "",
+    "debord": [],
+    "overlaps": []
+   },
+   "clavier": {
+    "scrollH": 695,
+    "innerH": 415,
+    "innerW": 393,
+    "scrollY": 280,
+    "vvH": 385,
+    "vvTop": 279.65625,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 354,
+     "width": 393,
+     "height": 61,
+     "top": 354,
+     "right": 393,
+     "bottom": 415,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 157.109375,
+     "width": 353,
+     "height": 69.5,
+     "top": 157.109375,
+     "right": 373,
+     "bottom": 226.609375,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 277,
+     "width": 353,
+     "height": 48,
+     "top": 277,
+     "right": 373,
+     "bottom": 325,
+     "left": 20
+    },
+    "active": "note2 gap",
+    "debord": [],
+    "overlaps": []
+   },
+   "defilement": {
+    "scrollH": 695,
+    "innerH": 695,
+    "innerW": 393,
+    "scrollY": 0,
+    "vvH": 385,
+    "vvTop": 0,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 634,
+     "width": 393,
+     "height": 61,
+     "top": 634,
+     "right": 393,
+     "bottom": 695,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 437.109375,
+     "width": 353,
+     "height": 69.5,
+     "top": 437.109375,
+     "right": 373,
+     "bottom": 506.609375,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 557,
+     "width": 353,
+     "height": 48,
+     "top": 557,
+     "right": 373,
+     "bottom": 605,
+     "left": 20
+    },
+    "active": "note2 gap",
+    "debord": [],
+    "overlaps": []
+   },
+   "sortie": {
+    "scrollH": 695,
+    "innerH": 695,
+    "innerW": 393,
+    "scrollY": 0,
+    "vvH": 695,
+    "vvTop": 0,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 634,
+     "width": 393,
+     "height": 61,
+     "top": 634,
+     "right": 393,
+     "bottom": 695,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 437.109375,
+     "width": 353,
+     "height": 69.5,
+     "top": 437.109375,
+     "right": 373,
+     "bottom": 506.609375,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 557,
+     "width": 353,
+     "height": 48,
+     "top": 557,
+     "right": 373,
+     "bottom": 605,
+     "left": 20
+    },
+    "active": "",
+    "debord": [],
+    "overlaps": []
+   }
+  },
+  "tr-ville.html": {
+   "checks": [
+    {
+     "check": "tient sur un écran",
+     "ok": true,
+     "detail": "(page 695 px, écran 695 px)"
+    },
+    {
+     "check": "pas de zoom au chargement",
+     "ok": true,
+     "detail": "(échelle None, zoom 1)"
+    },
+    {
+     "check": "clavier iOS ouvert",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "check": "pas de zoom en tapant",
+     "ok": true,
+     "detail": "(échelle None, zoom 1)"
+    },
+    {
+     "check": "champ Allergies visible au-dessus du clavier",
+     "ok": true,
+     "detail": "(champ 157–227, zone visible 170–555)"
+    },
+    {
+     "check": "champ et bouton ne se chevauchent pas",
+     "ok": true,
+     "detail": "(écart 160 px)"
+    },
+    {
+     "check": "clavier fermé après sortie du champ",
+     "ok": true,
+     "detail": ""
+    },
+    {
+     "check": "pas de zoom après sortie du champ",
+     "ok": true,
+     "detail": "(échelle None, zoom 1)"
+    },
+    {
+     "check": "barre du bas revenue exactement à sa place",
+     "ok": true,
+     "detail": "(avant 634–695, après 634–695)"
+    },
+    {
+     "check": "page revenue en haut (pas de décalage)",
+     "ok": true,
+     "detail": "(décalage 0 px)"
+    }
+   ],
+   "initial": {
+    "scrollH": 695,
+    "innerH": 695,
+    "innerW": 393,
+    "scrollY": 0,
+    "vvH": 695,
+    "vvTop": 0,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 634,
+     "width": 393,
+     "height": 61,
+     "top": 634,
+     "right": 393,
+     "bottom": 695,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 327.265625,
+     "width": 353,
+     "height": 69.5,
+     "top": 327.265625,
+     "right": 373,
+     "bottom": 396.765625,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 557,
+     "width": 353,
+     "height": 48,
+     "top": 557,
+     "right": 373,
+     "bottom": 605,
+     "left": 20
+    },
+    "active": "",
+    "debord": [],
+    "overlaps": []
+   },
+   "apres_plus_moins": null,
+   "clavier": {
+    "scrollH": 695,
+    "innerH": 525,
+    "innerW": 393,
+    "scrollY": 170,
+    "vvH": 385,
+    "vvTop": 169.65625,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 464,
+     "width": 393,
+     "height": 61,
+     "top": 464,
+     "right": 393,
+     "bottom": 525,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 157.265625,
+     "width": 353,
+     "height": 69.5,
+     "top": 157.265625,
+     "right": 373,
+     "bottom": 226.765625,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 387,
+     "width": 353,
+     "height": 48,
+     "top": 387,
+     "right": 373,
+     "bottom": 435,
+     "left": 20
+    },
+    "active": "note2 gap",
+    "debord": [],
+    "overlaps": []
+   },
+   "defilement": {
+    "scrollH": 695,
+    "innerH": 695,
+    "innerW": 393,
+    "scrollY": 0,
+    "vvH": 385,
+    "vvTop": 0,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 634,
+     "width": 393,
+     "height": 61,
+     "top": 634,
+     "right": 393,
+     "bottom": 695,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 327.265625,
+     "width": 353,
+     "height": 69.5,
+     "top": 327.265625,
+     "right": 373,
+     "bottom": 396.765625,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 557,
+     "width": 353,
+     "height": 48,
+     "top": 557,
+     "right": 373,
+     "bottom": 605,
+     "left": 20
+    },
+    "active": "note2 gap",
+    "debord": [],
+    "overlaps": []
+   },
+   "sortie": {
+    "scrollH": 695,
+    "innerH": 695,
+    "innerW": 393,
+    "scrollY": 0,
+    "vvH": 695,
+    "vvTop": 0,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 634,
+     "width": 393,
+     "height": 61,
+     "top": 634,
+     "right": 393,
+     "bottom": 695,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 327.265625,
+     "width": 353,
+     "height": 69.5,
+     "top": 327.265625,
+     "right": 373,
+     "bottom": 396.765625,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 557,
+     "width": 353,
+     "height": 48,
+     "top": 557,
+     "right": 373,
+     "bottom": 605,
+     "left": 20
+    },
+    "active": "",
+    "debord": [],
+    "overlaps": []
+   }
+  },
+  "tr-location.html": {
+   "checks": [
+    {
+     "check": "tient sur un écran",
+     "ok": true,
+     "detail": "(page 695 px, écran 695 px)"
+    },
+    {
+     "check": "pas de zoom au chargement",
+     "ok": true,
+     "detail": "(échelle None, zoom 1)"
+    },
+    {
+     "check": "clavier iOS ouvert",
+     "ok": false,
+     "detail": ""
+    }
+   ],
+   "initial": {
+    "scrollH": 695,
+    "innerH": 695,
+    "innerW": 393,
+    "scrollY": 0,
+    "vvH": 695,
+    "vvTop": 0,
+    "zoom": 1,
+    "fonts": "loaded",
+    "screenOverflow": 0,
+    "nav": {
+     "x": 0,
+     "y": 634,
+     "width": 393,
+     "height": 61,
+     "top": 634,
+     "right": 393,
+     "bottom": 695,
+     "left": 0
+    },
+    "note": {
+     "x": 20,
+     "y": 327.265625,
+     "width": 353,
+     "height": 69.5,
+     "top": 327.265625,
+     "right": 373,
+     "bottom": 396.765625,
+     "left": 20
+    },
+    "btn": {
+     "x": 20,
+     "y": 557,
+     "width": 353,
+     "height": 48,
+     "top": 557,
+     "right": 373,
+     "bottom": 605,
+     "left": 20
+    },
+    "active": "",
+    "debord": [],
+    "overlaps": []
+   }
+  }
+ },
+ "failures": [
+  "tr-location.html : clavier iOS ouvert "
+ ]
+}
