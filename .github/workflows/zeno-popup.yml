@@ -1,0 +1,94 @@
+name: Vérification pop-up ZENO2027
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Adresse de la preview (sans ?zeno=1)"
+        required: true
+        type: string
+      runner:
+        description: "Machine GitHub"
+        required: false
+        default: "macos-15-intel"
+
+# Pas de force-push, pas de results-big/small, pas de groupe ios-check.
+permissions:
+  contents: read
+
+concurrency:
+  group: zeno-popup-check
+  cancel-in-progress: false
+
+jobs:
+  zeno:
+    runs-on: ${{ inputs.runner || 'macos-15-intel' }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        size: [big, small]
+    env:
+      SIZE: ${{ matrix.size }}
+      OUT: results
+      VERCEL_PROTECTION_BYPASS: ${{ secrets.VERCEL_PROTECTION_BYPASS }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Masquer le secret de bypass
+        run: |
+          if [ -n "$VERCEL_PROTECTION_BYPASS" ]; then
+            echo "::add-mask::$VERCEL_PROTECTION_BYPASS"
+          else
+            echo "Secret VERCEL_PROTECTION_BYPASS manquant"
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Installer Appium et le pilote iOS
+        run: |
+          npm install -g appium@latest
+          appium --version
+          appium driver install xcuitest
+          python3 -m pip install --break-system-packages --ignore-installed "Appium-Python-Client>=4"
+
+      - name: Choisir l'iPhone simulé
+        run: python3 scripts/select_zeno_device.py "$SIZE"
+
+      - name: Préparer l'iPhone simulé
+        run: |
+          defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
+          xcrun simctl shutdown "$UDID" || true
+
+      - name: Démarrer l'iPhone simulé
+        run: |
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Adresse de la preview
+        run: |
+          echo "BASE_URL=${{ inputs.base_url }}" >> "$GITHUB_ENV"
+
+      - name: Démarrer Appium
+        run: |
+          nohup appium --log-level warn --log appium.log > /dev/null 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4723/status && break; sleep 2; done
+
+      - name: Tests pop-up ZENO dans le vrai Safari iOS
+        run: python3 scripts/zeno_popup_check.py
+
+      - name: Conserver les journaux
+        if: always()
+        run: |
+          mkdir -p results
+          echo "Exécution ${{ github.run_id }} — ${DEVICE_NAME:-inconnu} — iOS ${IOS_VERSION:-?}" > results/STATUS.txt
+          cp appium.log "results/$SIZE-appium.log" || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zeno-${{ matrix.size }}
+          path: results/
