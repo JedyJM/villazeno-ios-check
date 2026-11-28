@@ -1,0 +1,70 @@
+2026-11-28 06:46:48:640 [af6dccf7][XCUITestDriver@42b0] Reset: failed to terminate Simulator application with id "com.apple.mobilesafari"
+2026-11-28 06:56:36:831 [1f5e75a4][XCUITestDriver@42b0] Session '1f5e75a4-e877-4520-aaaa-a32db91bee12' is starting on udid 'B0784041-4057-4B9E-85B9-5C63C5C0D0B2', which is already in use by another session identified by af6dccf7-44ae-4b8d-b31b-2d67a99996ac. Running multiple parallel sessions on the same device is highly discouraged. Consider enabling the Appium server's '--session-override' flag and make sure to properly quit the previous session before starting a new one. Terminating the obsolete session.
+2026-11-28 06:56:36:920 [1f5e75a4][XCUITestDriver@f132] Reset: failed to terminate Simulator application with id "com.apple.mobilesafari"
+2026-11-28 06:59:29:477 [af6dccf7][XCUITestDriver@42b0] Unable to start WebDriverAgent: Error: We were not able to retrieve the /status response from the WebDriverAgent server after 300000ms timeout.Try to increase the value of 'appium:wdaLaunchTimeout' capability as a possible workaround.
+2026-11-28 06:59:39:562 [af6dccf7][XCUITestDriver@42b0] Error: WebDriverAgent is not initialized
+    at get wda (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/driver.js:322:19)
+    at quitAndThrow (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/commands/wda/startup.js:344:18)
+    at handleLaunchFailure (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/commands/wda/startup.js:229:11)
+    at file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/commands/wda/startup.js:187:19
+    at async wrapped (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/node_modules/asyncbox/build/lib/time/retry.js:40:19)
+    at async retry (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/node_modules/asyncbox/build/lib/time/retry.js:15:19)
+    at async retryInterval (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/node_modules/asyncbox/build/lib/time/retry.js:51:12)
+    at async runStartupWithRetries (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/commands/wda/startup.js:177:5)
+    at async startUnderSynchronizationLock (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/commands/wda/startup.js:128:5)
+    at async Acquisition.<anonymous> (file:///Users/runner/.appium/node_modules/appium-xcuitest-driver/build/lib/commands/wda/startup.js:22:9)
+2026-11-28 06:59:41:830 [af6dccf7][Xcode] xcodebuild exited with code 'null' and signal 'SIGTERM'
+2026-11-28 07:01:15:998 [1f5e75a4][RemoteDebugger] The application PID:40577 is not connectable yet: Application 'PID:40577' did not reply to connectToApp within 10000ms
+2026-11-28 07:01:26:505 [1f5e75a4][RemoteDebugger] The application PID:40577 is not connectable yet: Application 'PID:40577' did not reply to connectToApp within 10000ms
+2026-11-28 07:01:37:018 [1f5e75a4][RemoteDebugger] The application PID:40577 is not connectable yet: Application 'PID:40577' did not reply to connectToApp within 10000ms
+2026-11-28 07:01:47:525 [1f5e75a4][RemoteDebugger] The application PID:40577 is not connectable yet: Application 'PID:40577' did not reply to connectToApp within 10000ms
+2026-11-28 07:01:58:081 [1f5e75a4][RemoteDebugger] The application PID:40577 is not connectable yet: Application 'PID:40577' did not reply to connectToApp within 10000ms
+2026-11-28 07:02:08:593 [1f5e75a4][RemoteDebugger] The application PID:40577 is not connectable yet: Application 'PID:40577' did not reply to connectToApp within 10000ms
+2026-11-28 07:02:19:108 [1f5e75a4][RemoteDebugger] The application PID:40577 is not connectable yet: Application 'PID:40577' did not reply to connectToApp within 10000ms
+2026-11-28 07:02:30:196 [1f5e75a4][RemoteDebugger] The application PID:40577 is not connectable yet: Application 'PID:40577' did not reply to connectToApp within 10000ms
+2026-11-28 07:03:36:011 [1f5e75a4][XCUITestDriver@f132] Unable to do simple native web tap. Attempting to convert coordinates
+2026-11-28 07:04:43:015 [1f5e75a4][RemoteDebugger] The application PID:40577 is not connectable yet: Application 'PID:40577' did not reply to connectToApp within 10000ms
+2026-11-28 07:04:53:526 [1f5e75a4][RemoteDebugger] The application PID:40577 is not connectable yet: Application 'PID:40577' did not reply to connectToApp within 10000ms
+2026-11-28 07:05:04:030 [1f5e75a4][RemoteDebugger] The application PID:40577 is not connectable yet: Application 'PID:40577' did not reply to connectToApp within 10000ms
+2026-11-28 07:05:14:607 [1f5e75a4][RemoteDebugger] The application PID:40577 is not connectable yet: Application 'PID:40577' did not reply to connectToApp within 10000ms
+2026-11-28 07:05:25:145 [1f5e75a4][RemoteDebugger] The application PID:40577 is not connectable yet: Application 'PID:40577' did not reply to connectToApp within 10000ms
+2026-11-28 07:05:33:126 [1f5e75a4][RemoteDebugger] The application PID:40577 is not connectable yet: Empty page dictionary received
+2026-11-28 07:05:33:680 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:05:55:947 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:06:02:721 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:06:04:056 [1f5e75a4][XCUITestDriver@f132] Unable to do simple native web tap. Attempting to convert coordinates
+2026-11-28 07:06:30:315 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:06:34:053 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:06:40:826 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:06:46:505 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:06:47:044 [1f5e75a4][XCUITestDriver@f132] Unable to do simple native web tap. Attempting to convert coordinates
+2026-11-28 07:07:23:618 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:07:27:079 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:07:35:597 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:07:42:026 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:07:42:692 [1f5e75a4][XCUITestDriver@f132] Unable to do simple native web tap. Attempting to convert coordinates
+2026-11-28 07:08:03:292 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:08:06:787 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:08:23:397 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:08:29:614 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:08:30:407 [1f5e75a4][XCUITestDriver@f132] Unable to do simple native web tap. Attempting to convert coordinates
+2026-11-28 07:08:47:618 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:08:50:902 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:09:07:160 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:09:12:835 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:09:13:427 [1f5e75a4][XCUITestDriver@f132] Unable to do simple native web tap. Attempting to convert coordinates
+2026-11-28 07:09:31:192 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:09:43:434 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:10:01:072 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:10:07:936 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:10:09:018 [1f5e75a4][XCUITestDriver@f132] Unable to do simple native web tap. Attempting to convert coordinates
+2026-11-28 07:10:27:850 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:10:31:623 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:10:50:553 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:10:57:176 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:10:57:884 [1f5e75a4][XCUITestDriver@f132] Unable to do simple native web tap. Attempting to convert coordinates
+2026-11-28 07:11:22:008 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:11:25:843 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:11:45:001 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:11:51:976 [1f5e75a4][RemoteDebugger] The application PID:40709 is not connectable yet: Empty page dictionary received
+2026-11-28 07:11:52:820 [1f5e75a4][XCUITestDriver@f132] Unable to do simple native web tap. Attempting to convert coordinates
