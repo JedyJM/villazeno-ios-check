@@ -2,7 +2,10 @@ name: Parcours E2E staging (vrai Safari iOS)
 
 # Lancement à la main uniquement. Aucune adresse, clé ni jeton en entrée :
 # tout vient des secrets E2E_* (supprimés après chaque campagne).
-# Ne publie sur AUCUNE branche : seulement des artefacts conservés 1 jour.
+# Ne publie sur AUCUNE branche. Seul artefact : les résultats CHIFFRÉS
+# (openssl AES-256-CBC + PBKDF2, mot de passe = secret E2E_ART_PASS) et un
+# STATUS.txt minimal (modèle, iOS, conclusion, nombres pass/fail), 1 jour.
+# Journal du job : tout le stdout du test passe par scripts/redact.py --stream.
 on:
   workflow_dispatch:
     inputs:
@@ -65,37 +68,78 @@ jobs:
           E2E_GUEST_K: ${{ secrets.E2E_GUEST_K }}
           E2E_EXEC_URL: ${{ secrets.E2E_EXEC_URL }}
           E2E_ADMIN_TOKEN: ${{ secrets.E2E_ADMIN_TOKEN }}
+          PYTHONUNBUFFERED: "1"
+        shell: bash --noprofile --norc -eo pipefail {0}
         run: |
           set +x
-          python3 scripts/ios_e2e.py && exit 0
+          # stdout ET stderr expurgés avant d'atteindre le journal public du job
+          python3 scripts/ios_e2e.py 2>&1 | python3 scripts/redact.py --stream && exit 0
           code=$?
           # Une seule relance, et seulement si la session Appium n'a pas démarré
           # (simulateur planté) : aucune demande n'a donc été envoyée.
-          if python3 -c "import json,sys; r=json.load(open('results/$SIZE-results.json')); sys.exit(0 if (not r.get('session') and r.get('submitted',0)==0) else 1)"; then
+          if python3 -c "import json,sys; r=json.load(open('results/$SIZE-results.json')); sys.exit(0 if (not r.get('session') and r.get('submitted',0)==0) else 1)" 2>/dev/null; then
             echo "Session Appium impossible : seconde tentative"
             sleep 15
-            python3 scripts/ios_e2e.py
+            python3 scripts/ios_e2e.py 2>&1 | python3 scripts/redact.py --stream
           else
             exit $code
           fi
 
-      - name: Expurger les journaux avant artefact
+      - name: Expurger, puis chiffrer les résultats (rien de lisible ne part)
         if: always()
         env:
           E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
           E2E_VERCEL_SHARE: ${{ secrets.E2E_VERCEL_SHARE }}
           E2E_GUEST_K: ${{ secrets.E2E_GUEST_K }}
           E2E_EXEC_URL: ${{ secrets.E2E_EXEC_URL }}
+          E2E_ART_PASS: ${{ secrets.E2E_ART_PASS }}
         run: |
           set +x
-          mkdir -p results
-          python3 scripts/redact.py appium.log "results/$SIZE-appium.log" results
-          echo "Exécution ${{ github.run_id }} — iPhone ${DEVICE_NAME:-inconnu} — iOS ${IOS_VERSION:-?}" > "results/$SIZE-STATUS.txt"
+          mkdir -p results pub
+          python3 scripts/redact.py appium.log "results/$SIZE-appium.log" results > /dev/null 2>&1 || true
+          # STATUS public minimal : modèle, iOS, conclusion, nombres (aucune cause)
+          python3 - > "pub/$SIZE-STATUS.txt" 2>/dev/null <<'PY' || echo "statut indisponible" > "pub/$SIZE-STATUS.txt"
+          import json, os
+          size = os.environ["SIZE"]
+          try:
+              r = json.load(open(f"results/{size}-results.json"))
+              st = [t.get("status") for t in r.get("tests", {}).values()]
+              concl = "pass" if st and "fail" not in st else "fail"
+              print(f"{os.environ.get('DEVICE_NAME', '?')} | iOS {os.environ.get('IOS_VERSION', '?')} | {concl} | pass {st.count('pass')} | fail {st.count('fail')} | skip {st.count('skip')} | envois {r.get('submitted', 0)}")
+          except Exception:
+              print(f"{os.environ.get('DEVICE_NAME', '?')} | iOS {os.environ.get('IOS_VERSION', '?')} | résultats absents")
+          PY
+          # Contrôle bloquant du seul fichier lisible publié
+          if grep -Eiq 'AKfycb|k=|_vercel_share|_vercel_jwt|vercel\.app|script\.google|https?://' "pub/$SIZE-STATUS.txt"; then
+            echo "STATUS.txt contient un motif interdit : rien n'est publié"
+            rm -rf pub; mkdir -p pub; echo "bloqué" > "pub/$SIZE-STATUS.txt"
+            exit 1
+          fi
+          # openssl : celui de Homebrew (OpenSSL 3) si présent, sinon celui du système s'il connaît -pbkdf2
+          OSSL=""
+          for c in "$(brew --prefix openssl@3 2>/dev/null)/bin/openssl" /opt/homebrew/opt/openssl@3/bin/openssl /usr/local/opt/openssl@3/bin/openssl /usr/bin/openssl; do
+            if [ -x "$c" ] && "$c" enc -help 2>&1 | grep -q -- '-pbkdf2'; then OSSL="$c"; break; fi
+          done
+          if [ -z "$OSSL" ] || [ -z "$E2E_ART_PASS" ]; then
+            echo "Chiffrement impossible (openssl sans -pbkdf2 ou mot de passe absent) : aucun résultat publié"
+            exit 1
+          fi
+          "$OSSL" version
+          tar -czf results.tgz results
+          "$OSSL" enc -aes-256-cbc -pbkdf2 -iter 200000 -md sha256 -salt -pass env:E2E_ART_PASS -in results.tgz -out "pub/$SIZE-results.tgz.enc"
+          # aller-retour : le fichier chiffré doit se déchiffrer à l'identique, sinon rien n'est publié
+          "$OSSL" enc -d -aes-256-cbc -pbkdf2 -iter 200000 -md sha256 -pass env:E2E_ART_PASS -in "pub/$SIZE-results.tgz.enc" -out check.tgz
+          if ! cmp -s results.tgz check.tgz; then
+            echo "Aller-retour du chiffrement en échec : aucun résultat publié"
+            rm -f "pub/$SIZE-results.tgz.enc"; exit 1
+          fi
+          rm -rf results.tgz check.tgz results appium.log
+          ls pub
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: e2e-${{ matrix.size }}
-          path: results/
+          path: pub/
           retention-days: 1
           if-no-files-found: warn

@@ -85,11 +85,11 @@ def red(s):
 
 
 def mask_in_logs(*vals):
-    # Commande officielle de GitHub Actions : la ligne n'est pas affichée,
-    # la valeur est ensuite remplacée par *** dans tout le journal.
-    for v in vals:
-        if v:
-            print(f"::add-mask::{v}", flush=True)
+    # Volontairement vide : aucune commande ::add-mask:: n'est émise (elle
+    # contiendrait la valeur). Tout le stdout passe par red() puis par
+    # scripts/redact.py --stream dans le workflow ; GitHub masque en plus
+    # les valeurs exactes des secrets.
+    return None
 
 
 def log(*a):
