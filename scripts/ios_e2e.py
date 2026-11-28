@@ -46,6 +46,7 @@ OUT = os.environ.get("OUT", "results")
 LABEL = os.environ.get("SIZE", "device")
 DEMO = "FAMDEMO2812"
 MAX_SENDS = 4
+MAXS = [MAX_SENDS]  # passe à 0 si le séjour démo n'est pas propre
 os.makedirs(OUT, exist_ok=True)
 
 HOST = urllib.parse.urlparse(BASE).hostname or ""
@@ -185,6 +186,17 @@ def exec_get(params, token=None):
             last = e
             time.sleep(3)
     raise RuntimeError(f"API admin staging injoignable ({type(last).__name__}) [backend]")
+
+
+def exec_post(body):
+    data = json.dumps(dict({"token": ADMIN_TOKEN, "test": "1"}, **body)).encode("utf-8")
+    req = urllib.request.Request(EXEC, data=data, headers={"Content-Type": "text/plain;charset=utf-8"}, method="POST")
+    with urllib.request.urlopen(req, timeout=90) as r:  # 302 Apps Script → GET suivi par urllib
+        return json.loads(r.read().decode("utf-8"))
+
+
+def demo_stay():
+    return next((x for x in (exec_get({"action": "stays"}).get("stays") or []) if x.get("id") == DEMO), None)
 
 
 def demandes():
@@ -427,7 +439,7 @@ def safe_shot(name):
 
 # ---------------------------------------------------------------- envois (quota)
 def can_send():
-    if results["submitted"] >= MAX_SENDS:
+    if results["submitted"] >= MAXS[0]:
         raise Skip(f"quota du harnais atteint ({MAX_SENDS} envois par appareil)")
 
 
@@ -478,6 +490,56 @@ def chain(tid, page, service, date, fill, submit_sel, total=None, trip=None):
     wa = js("return (window.__waOpened||[]).length;")
     SENT[tid] = {"id": it["id"], "service": service, "date": date, "wa": wa}
     return it
+
+
+# ---------------------------------------------------------------- remise à zéro du séjour démo
+CLEAR_JS = """
+const done = arguments[arguments.length-1], id = arguments[0];
+(async () => {
+  await new Promise((ok) => window.AdminStays.load(() => ok(), true));
+  const s = window.AdminStays.find(id);
+  if (!s) return "missing";
+  if (!s.encaisse_le) return "clean";
+  const copy = Object.assign({}, s, { encaisse_total_eur: "", encaisse_mode: "", encaisse_le: "", offerts: "" });
+  const r = await window.AdminStays.post({ action: "save-stay", test: window.AdminStays.testFlag(), token: window.AdminShell.session(), stay: window.AdminStays.sheet(copy) });
+  return r && r.ok ? "cleared" : "failed:" + (r && r.kind);
+})().then(done, (e) => done("error:" + e));
+"""
+
+
+def t_reset():
+    """iPhone big seulement : même remise à zéro que resetDemo() du harnais Playwright du site
+    (anciennes demandes du séjour → « Annulée » par l'API admin, Encaissement effacé par la page admin).
+    Aucune demande créée. Le small attend que ce soit fait (sinon il annulerait les envois du big)."""
+    items = [x for x in demandes() if x.get("stay") == DEMO and x.get("status") != "Annulée"]
+    for it in items:
+        r = exec_post({"action": "set-demande", "id": it["id"], "statut": "Annulée"})
+        check(f"ancienne demande annulée", bool(r and r.get("ok")), f"({str(r)[:80]})")
+    admin_login()
+    go("/admin/sejours.html")
+    staging_guard()
+    wait_js("window.AdminStays && window.AdminShell", 45, "pages admin prêtes")
+    d.set_script_timeout(120)
+    unpaid = d.execute_async_script(CLEAR_JS, DEMO)
+    d.set_script_timeout(60)
+    check("Encaissement du séjour démo effacé", unpaid in ("clean", "cleared"), f"({unpaid})")
+    left = [x for x in demandes() if x.get("stay") == DEMO and x.get("status") != "Annulée"]
+    s = demo_stay()
+    check("séjour démo propre (API)", not left and s and not s.get("encaisse_le"), f"({len(left)} demande(s) non annulée(s), encaissé {bool(s and s.get('encaisse_le'))})")
+    note(f"remise à zéro : {len(items)} ancienne(s) demande(s) annulée(s), Encaissement {unpaid}")
+
+
+def t_wait_reset():
+    """iPhone small : attend la remise à zéro faite par le big (plus aucune « Terminée », plus d'encaissement)."""
+    end = time.time() + 25 * 60
+    while time.time() < end:
+        term = [x for x in demandes() if x.get("stay") == DEMO and x.get("status") == "Terminée"]
+        s = demo_stay()
+        if not term and s and not s.get("encaisse_le"):
+            note("remise à zéro du big constatée")
+            return
+        time.sleep(20)
+    raise AssertionError("le séjour démo n'a pas été remis à zéro par l'iPhone big en 25 min : aucun envoi [harnais/rig]")
 
 
 # ---------------------------------------------------------------- parcours invité
@@ -537,6 +599,8 @@ def t_G0():
 
 def t_V():
     """Erreur de validation : numéro de vol vide → message, aria-invalid, AUCUN envoi."""
+    if MAXS[0] == 0:
+        raise Skip("séjour démo non remis à zéro")
     open_guest("transfert.html")
     no_wa()
     date = D(OFFS["V"])
@@ -719,6 +783,14 @@ def t_A_confirm():
         check(f"{t} : statut Confirmée côté serveur", it and it.get("status") == "Confirmée", f"({it and it.get('status')!r})")
 
 
+def t_A_aujourdhui():
+    go("/admin/aujourdhui.html")
+    staging_guard()
+    wait_js("document.querySelector('[data-sync] [data-refresh]:not([disabled])')", 60, "Aujourd'hui chargé")
+    check("aucun défilement horizontal", h_overflow() <= 1, f"({h_overflow()} px)")
+    shot("A-aujourdhui")
+
+
 def t_G_confirmee():
     if not any(t in SENT for t in ("G10", "G4")):
         raise Skip("aucune demande confirmée")
@@ -886,6 +958,13 @@ def main():
             note("préparation en échec : aucun parcours lancé (aucun envoi)")
             return 1
         dismiss_safari_tips()
+        if LABEL == "big":
+            run("R0", "remise à zéro du séjour démo (annule les anciennes demandes, efface l'encaissement)", t_reset, "backend/harnais")
+        else:
+            run("R0", "attente de la remise à zéro faite par l'iPhone big", t_wait_reset, "harnais")
+        if results["tests"]["R0"]["status"] != "pass":
+            note("séjour démo non remis à zéro : aucun envoi")
+            MAXS[0] = 0
         run("G0", "accueil invité depuis le séjour (sans page d'accès ni erreur)", t_G0)
         run("A0", "admin (mode test) : liste Demandes avant envois", t_A0)
         run("V1", "erreur de validation (vol vide) : message, aucun envoi", t_V)
@@ -895,6 +974,7 @@ def main():
         run("G3m", "Mes demandes : « Envoyée », libellés français", t_mes_demandes)
         run("A4", "admin : nouvelles demandes visibles après « Actualiser »", t_A4)
         run("A6c", "admin : confirmer G10 et G4 (Changer statut → Confirmée)", t_A_confirm)
+        run("A9a", "admin : Aujourd'hui (lecture)", t_A_aujourdhui)
         run("G9c", "invité : « Confirmée » dans Mes demandes", t_G_confirmee)
         run("G12r", "récapitulatif (lecture seule, sans encaissement)", t_recap)
         run("S5", "téléphone : champs ≥ 16 px, vrai clavier, pas de zoom, barre du bas", t_S5)
