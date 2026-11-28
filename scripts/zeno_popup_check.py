@@ -109,12 +109,48 @@ def boot_url(lang):
     return u + sep + "x-vercel-protection-bypass=" + BYPASS + "&x-vercel-set-bypass-cookie=samesitenone"
 
 
+def _href(d):
+    try:
+        return d.execute_script(
+            "return {path: location.pathname, host: location.host, zeno: new URLSearchParams(location.search).get('zeno'),"
+            " hasBypass: new URLSearchParams(location.search).has('x-vercel-protection-bypass'),"
+            " title: document.title, dialogs: document.querySelectorAll('dialog.zeno-promo').length,"
+            " ready: document.readyState};"
+        ) or {}
+    except Exception as e:
+        return {"error": type(e).__name__}
+
+
 def web(d):
-    for c in d.contexts:
-        if c.startswith("WEBVIEW"):
-            d.switch_to.context(c)
-            return
-    raise RuntimeError(f"Pas de contexte web : {d.contexts}")
+    """Préférer le webview du site (éviter un iframe cookies Meta)."""
+    deadline = time.time() + 30
+    last = []
+    while time.time() < deadline:
+        try:
+            last = list(d.contexts)
+        except Exception:
+            last = []
+        webviews = [c for c in last if "WEBVIEW" in c]
+        site = None
+        for c in webviews:
+            try:
+                d.switch_to.context(c)
+                info = _href(d)
+            except Exception:
+                continue
+            host = (info.get("host") or "")
+            if "vercel.app" in host or "villazeno" in host:
+                site = (c, info)
+                if info.get("title"):
+                    break
+        if site:
+            d.switch_to.context(site[0])
+            return site[1]
+        time.sleep(0.5)
+    if any("WEBVIEW" in c for c in last):
+        d.switch_to.context([c for c in last if "WEBVIEW" in c][-1])
+        return _href(d)
+    raise RuntimeError(f"Pas de contexte web : {last}")
 
 
 def native(d):
@@ -154,6 +190,48 @@ def dismiss_safari_tips(d):
             time.sleep(0.6)
         time.sleep(0.8)
     web(d)
+
+
+DISMISS_COOKIES = r"""
+const labels = /^(refuser|decline|refuse|reject|not now|pas maintenant)$/i;
+const all = document.querySelectorAll("button, a, [role=button]");
+for (const b of all) {
+  const t = (b.innerText || b.textContent || "").trim();
+  if (labels.test(t)) { b.click(); return t; }
+}
+return "";
+"""
+
+
+def dismiss_cookies(d):
+    web(d)
+    try:
+        d.switch_to.default_content()
+    except Exception:
+        pass
+    clicked = ""
+    try:
+        clicked = d.execute_script(DISMISS_COOKIES) or ""
+    except Exception:
+        clicked = ""
+    if clicked:
+        print("Bannière cookies :", clicked, flush=True)
+        time.sleep(1.2)
+    return clicked
+
+
+def open_page(d, lang, use_bypass):
+    url = boot_url(lang) if use_bypass else clean_url(lang)
+    # Ne jamais imprimer l'URL avec le jeton.
+    print("Navigation", lang, "bypass" if use_bypass else "propre", flush=True)
+    d.get(url)
+    time.sleep(2)
+    info = web(d)
+    dismiss_safari_tips(d)
+    dismiss_cookies(d)
+    info = web(d)
+    print("Page", info, flush=True)
+    return info
 
 
 results = {
@@ -204,42 +282,44 @@ try:
     web(d)
     time.sleep(2)
     dismiss_safari_tips(d)
-    # Cookie de bypass posé (si secret présent) : on enchaîne sur l'URL propre.
-    first = True
+    # Poser le cookie de bypass (sans capture), puis ouvrir l'URL propre ?zeno=1.
+    if BYPASS:
+        open_page(d, "fr", use_bypass=True)
     for lang in ("fr", "en"):
         case = f"{lang}-{LABEL}"
         web(d)
-        if first and BYPASS:
-            # Revenir à l'URL sans le paramètre de bypass avant les captures.
-            d.get(clean_url(lang))
-            first = False
-        else:
-            d.get(clean_url(lang))
-        time.sleep(2.5)
-        dismiss_safari_tips(d)
+        info = open_page(d, lang, use_bypass=False)
 
-        # Attendre la pop-up
+        # Attendre la pop-up ; si absente, un second passage par ?zeno=1 après les cookies.
         deadline = time.time() + 20
         m = {"exists": False}
+        retried = False
         while time.time() < deadline:
             try:
+                web(d)
+                dismiss_cookies(d)
                 m = d.execute_script(MEASURE) or {}
             except Exception as e:
-                m = {"exists": False, "error": str(e)}
+                m = {"exists": False, "error": type(e).__name__}
             if m.get("visible"):
                 break
+            if not retried and time.time() > deadline - 10:
+                retried = True
+                open_page(d, lang, use_bypass=False)
             time.sleep(0.5)
+        print("Mesure", case, {k: m.get(k) for k in ("exists", "open", "visible", "titleLines", "leadLines", "bodyHasProtection", "error")}, "page", info, flush=True)
 
         shot(d, f"{lang}-open")
         check(case, "pop-up visible", m.get("visible"), f"(exists={m.get('exists')} open={m.get('open')} protection={m.get('bodyHasProtection')})")
         check(case, "titre sur une ligne", m.get("titleLines") == 1, f"(lignes={m.get('titleLines')} texte={m.get('title')!r})")
         check(case, "sous-titre sur une ligne", m.get("leadLines") == 1, f"(lignes={m.get('leadLines')} texte={m.get('lead')!r})")
         check(case, "href WhatsApp identique", m.get("href") == HREF[lang], f"(obtenu={m.get('href')!r})")
-        check(case, "aucun débordement", (m.get("innerOverflowY") or 0) <= 1 and (m.get("innerOverflowX") or 0) <= 1 and not m.get("outside"),
+        overflow_ok = bool(m.get("visible")) and (m.get("innerOverflowY") or 0) <= 1 and (m.get("innerOverflowX") or 0) <= 1 and not m.get("outside")
+        check(case, "aucun débordement", overflow_ok,
               f"(overflowY={m.get('innerOverflowY')} overflowX={m.get('innerOverflowX')} outside={m.get('outside')})")
-        check(case, "texte ≥ 12 px", (m.get("minFont") or 0) >= 12, f"(minFont={m.get('minFont')})")
+        check(case, "texte ≥ 12 px", bool(m.get("visible")) and (m.get("minFont") or 0) >= 12, f"(minFont={m.get('minFont')})")
         small = [t for t in (m.get("targets") or []) if t["w"] < 44 or t["h"] < 44]
-        check(case, "cibles ≥ 44 px", not small, f"{small}")
+        check(case, "cibles ≥ 44 px", bool(m.get("visible")) and not small, f"{small}")
 
         # Copie du code
         copy_method = "aucun"
