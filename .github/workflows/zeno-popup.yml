@@ -1,14 +1,9 @@
 name: Vérification pop-up ZENO2027
 
 on:
-  # workflow_dispatch n'est exposé par l'API que si le fichier est sur la branche
-  # par défaut ; on déclenche donc aussi au push de cette branche dédiée.
-  push:
-    branches: [zeno-popup-check]
-    paths:
-      - ".github/workflows/zeno-popup.yml"
-      - "scripts/zeno_popup_check.py"
-      - "scripts/select_zeno_device.py"
+  # Plus de déclenchement au push : lancer à la main (workflow_dispatch)
+  # une fois le fichier présent sur la branche par défaut, ou via un push
+  # ponctuel remis si besoin. Main n'est pas touchée.
   workflow_dispatch:
     inputs:
       base_url:
