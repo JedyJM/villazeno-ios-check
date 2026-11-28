@@ -32,9 +32,10 @@ jobs:
     env:
       SIZE: ${{ matrix.size }}
       OUT: results
-      # Run du 28/11 après-midi : P0 puis A1, A2, A3 seulement (aucune remise à zéro du
-      # séjour démo, aucun envoi invité). Vide = suite complète. Pas un secret.
-      E2E_ONLY: "A1,A2,A3"
+      # Run audit du 28/11 : P0 (sans API admin) puis AUD1…AUD8 côté invité sur le séjour
+      # démo : aucune remise à zéro, aucun envoi, aucun appel admin. Vide = suite complète.
+      # Pas un secret.
+      E2E_ONLY: "AUD"
     steps:
       - uses: actions/checkout@v4
 

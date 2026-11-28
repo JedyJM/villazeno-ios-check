@@ -50,7 +50,12 @@ MAXS = [MAX_SENDS]  # passe à 0 si le séjour démo n'est pas propre
 # E2E_ONLY (non secret, posé par le workflow) : "A1,A2,A3" = P0 puis ces tests seulement
 # (aucune remise à zéro du séjour démo, aucun envoi invité). Vide = suite complète.
 ONLY = [x.strip().upper() for x in os.environ.get("E2E_ONLY", "").split(",") if x.strip()]
-ONLY_OK = ("A1", "A2", "A3")
+AUD_IDS = ("AUD1", "AUD2", "AUD4", "AUD5", "AUD6", "AUD8")
+ONLY_OK = ("A1", "A2", "A3") + AUD_IDS
+if "AUD" in ONLY:  # « AUD » = tous les tests de l'audit du 28/11
+    ONLY = [x for x in ONLY if x != "AUD"] + list(AUD_IDS)
+# Mode audit : invité seulement, aucun appel à l'API admin (ADMIN_TEST_MODE coupé sur staging)
+NO_ADMIN = bool(ONLY) and all(x.startswith("AUD") for x in ONLY)
 os.makedirs(OUT, exist_ok=True)
 
 HOST = urllib.parse.urlparse(BASE).hostname or ""
@@ -319,24 +324,35 @@ def tap(sel, timeout=15, guard=False):
     """Vrai toucher (nativeWebTap) sur le premier élément visible.
     guard=True : avant de toucher, l'élément au point touché doit être la cible
     (rien par-dessus, ex. la barre Vercel) ; sinon BLOQUÉ, aucun toucher."""
-    end = time.time() + timeout
-    e = None
-    while time.time() < end and e is None:
-        e = visible(sel)
+    # La page peut se redessiner (réponse fraîche après le cache) entre la recherche
+    # et le toucher : sur élément périmé, on recherche l'élément et on recommence
+    # (3 essais), sans jamais toucher un élément périmé.
+    for attempt in range(3):
+        end = time.time() + timeout
+        e = None
+        while time.time() < end and e is None:
+            e = visible(sel)
+            if e is None:
+                time.sleep(0.5)
         if e is None:
-            time.sleep(0.5)
-    if e is None:
-        raise AssertionError(f"élément introuvable : {sel}")
-    js("arguments[0].scrollIntoView({block:'center', inline:'nearest'});", e)
-    time.sleep(0.4)
-    if guard:
-        hit = js("var el=arguments[0], r=el.getBoundingClientRect(), h=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2);"
-                 "return h ? ((h===el || el.contains(h)) ? '' : (h.tagName||'').toLowerCase()) : 'rien';", e)
-        if hit:
-            raise Blocked(f"{sel} recouvert par <{hit}> au point de toucher : aucun toucher")
-    e.click()
-    time.sleep(0.6)
-    return e
+            raise AssertionError(f"élément introuvable : {sel}")
+        try:
+            js("arguments[0].scrollIntoView({block:'center', inline:'nearest'});", e)
+            time.sleep(0.4)
+            if guard:
+                hit = js("var el=arguments[0], r=el.getBoundingClientRect(), h=document.elementFromPoint(r.left+r.width/2, r.top+r.height/2);"
+                         "return h ? ((h===el || el.contains(h)) ? '' : (h.tagName||'').toLowerCase()) : 'rien';", e)
+                if hit:
+                    raise Blocked(f"{sel} recouvert par <{hit}> au point de toucher : aucun toucher")
+            e.click()
+        except Exception as ex:  # noqa: BLE001
+            if type(ex).__name__ != "StaleElementReferenceException" or attempt == 2:
+                raise
+            log(f"élément périmé ({sel}), nouvelle recherche")
+            time.sleep(1)
+            continue
+        time.sleep(0.6)
+        return e
 
 
 def js_click(sel):
@@ -599,10 +615,13 @@ def t_setup():
         pass
     check("/api/vz-env répond « staging » (runner)", st == 200 and env.get("env") == "staging", f"(HTTP {st}, env {env.get('env')!r})")
     check("l'aperçu est branché sur le même /exec de staging que les contrôles", env.get("execUrl") == EXEC)
-    r = exec_get({"action": "stays"})
-    s = next((x for x in (r.get("stays") or []) if x.get("id") == DEMO), None)
-    check("séjour de démonstration présent dans le staging", s is not None)
-    check("clé du séjour de démonstration à jour", s.get("k") in (None, "", GUEST_K), "(E2E_GUEST_K différente de celle du staging)")
+    if NO_ADMIN:
+        note("mode audit : aucun appel à l'API admin ; séjour démo vérifié par la page invitée")
+    else:
+        r = exec_get({"action": "stays"})
+        s = next((x for x in (r.get("stays") or []) if x.get("id") == DEMO), None)
+        check("séjour de démonstration présent dans le staging", s is not None)
+        check("clé du séjour de démonstration à jour", s.get("k") in (None, "", GUEST_K), "(E2E_GUEST_K différente de celle du staging)")
     # Safari : cookie d'accès par le lien de partage, puis /api/vz-env chauffé.
     web()
     d.get(BASE + "/?_vercel_share=" + urllib.parse.quote(SHARE, safe=""))
@@ -622,6 +641,11 @@ def t_setup():
     js("localStorage.setItem('villazeno.stay', arguments[0]); localStorage.setItem('villazeno.stayKey', arguments[1]);", DEMO, GUEST_K)
     prod = js("return window.VZApi ? VZApi.PROD_URL : '';")
     check("le /exec des contrôles n'est PAS celui de la production", prod and prod != EXEC)
+    if NO_ADMIN:
+        go("/guest/")
+        stay_ready()
+        staging_guard()
+        check("séjour démo ouvert par le lien invité (clé en localStorage, aucune API admin)", js("return window.GuestStay.snapshot().id;") == DEMO)
 
 
 def t_G0():
@@ -943,6 +967,186 @@ def t_A8():
     shot("A8-porte")
 
 
+# ---------------------------------------------------------------- audit du 28/11 (invité, 0 envoi, 0 admin)
+def layout_ok(tag):
+    check(f"{tag} : aucun défilement horizontal", h_overflow() <= 1, f"({h_overflow()} px)")
+    check(f"{tag} : pas de zoom", scale() in (1, 1.0), f"(échelle {scale()})")
+
+
+def text_of(sel):
+    return js("const e=document.querySelector(arguments[0]); return e ? e.textContent.trim() : null;", sel)
+
+
+def demo_travelers():
+    """Adultes + enfants du séjour démo, lus côté invité (même règle que la page)."""
+    return js("const s=(window.GuestStay.snapshot()||{}).stay||{}; if(!(Number(s.adults)>0)) return 0;"
+              "const k=Math.max(Number(s.children)||0,(Number(s.children_4_11)||0)+(Number(s.under_4)||0)); return Number(s.adults)+k;")
+
+
+def t_AUD1():
+    open_guest("transfert.html")
+    n = demo_travelers()
+    check("voyageurs du séjour démo lus côté invité", n > 0, f"({n})")
+    pax, town = min(n, 16), min(n, 8)
+    wait_js(f"document.querySelector(\"[data-transfer-form][data-prefilled='{pax}']\")", 20, "Aéroport prérempli")
+    check("Aéroport : passagers = adultes + enfants", text_of("[data-passengers-count]") == str(pax), f"({text_of('[data-passengers-count]')!r}, attendu {pax})")
+    shot("AUD1-01-aeroport-prerempli")
+    layout_ok("Aéroport")
+    if pax < 16:
+        tap("[data-step='passengers'][data-dir='1']", guard=True)
+        check("Aéroport : « + » au vrai toucher", text_of("[data-passengers-count]") == str(pax + 1), f"({text_of('[data-passengers-count]')!r})")
+    tap("[data-show='city']", guard=True)
+    check("En ville : personnes préremplies", text_of("[data-city-count]") == str(town), f"({text_of('[data-city-count]')!r}, attendu {town})")
+    tap("[data-city-step='-1']", guard=True)
+    check("En ville : « − » au vrai toucher", text_of("[data-city-count]") == str(max(1, town - 1)), f"({text_of('[data-city-count]')!r})")
+    shot("AUD1-02-en-ville")
+    layout_ok("En ville")
+
+
+def price_total():
+    t = text_of("[data-transfer-form] [data-price-total]") or ""
+    digits = "".join(c for c in t if c.isdigit())
+    return (int(digits) if digits else None), t
+
+
+def t_AUD2():
+    open_guest("transfert.html")
+    wait_js("document.querySelector('[data-transfer-form][data-prefilled]')", 20, "Aéroport prérempli")
+    check("plus d'interrupteur siège bébé", js("return document.querySelectorAll(\"[data-transfer-form] [name='baby_seat'], [data-transfer-form] .baby-row .switch\").length;") == 0)
+    check("compteur siège bébé à 0", text_of("[data-baby-count]") == "0", f"({text_of('[data-baby-count]')!r})")
+    check("« − » désactivé à 0", js("const b=document.querySelector(\"[data-step='baby'][data-dir='-1']\"); return !!(b && b.disabled);"))
+    hint = js("const e=document.querySelector('.baby-hint'); if(!e) return ''; const r=e.getBoundingClientRect(); return r.width>0 && r.height>0 ? e.textContent.trim() : '(cachée)';")
+    check("ligne « 50 MAD le siège » visible", hint == "50 MAD le siège", f"({hint!r})")
+    t0, txt0 = price_total()
+    tap("[data-step='baby'][data-dir='1']", guard=True)
+    check("« + » au vrai toucher → 1 siège", text_of("[data-baby-count]") == "1", f"({text_of('[data-baby-count]')!r})")
+    t1, txt1 = price_total()
+    check("total + 50 MAD", t0 is not None and t1 == t0 + 50 and "MAD" in txt1, f"({txt0!r} → {txt1!r})")
+    brk = text_of("[data-transfer-form] [data-price-break]") or ""
+    check("détail « 1 siège bébé 50 MAD »", "1 siège bébé 50 MAD" in brk, f"({brk!r})")
+    shot("AUD2-siege-bebe-1")
+    layout_ok("Transfert siège bébé")
+
+
+def t_AUD4():
+    open_guest("acces.html")
+    tap(".bottom-nav [data-open-contacts]", guard=True)
+    wait_js("(document.querySelector('#contacts-dialog')||{}).open", 15, "feuille Contacts utiles ouverte")
+    txt = js("return document.querySelector('#contacts-dialog').innerText;")
+    check("pas de « depuis un fixe »", "depuis un fixe" not in txt)
+    check("pas de sous-titre « WhatsApp » (wa-label)", js("return document.querySelectorAll('#contacts-dialog .wa-label').length;") == 0)
+    who = js("return [...document.querySelectorAll('#contacts-dialog .who')].map(e=>e.innerText.trim());")
+    check("Mehdi et Hicham sans sous-titre", "Mehdi" in who and "Hicham" in who, f"({who[:3]})")
+    shot("AUD4-contacts")
+    tap("[data-contacts-close]", guard=True)
+
+
+DETECT_JS = ("const m=document.querySelector('meta[name=\"format-detection\"]');"
+             "const auto=[...document.querySelectorAll('a[x-apple-data-detectors], a[href^=\"tel:\"]')].filter(a=>a.hasAttribute('x-apple-data-detectors') || !a.closest('#contacts-dialog, .contact-list, [data-contacts]'));"
+             "return {meta: m ? m.getAttribute('content') : null, auto: auto.length, sample: auto.slice(0,2).map(a=>a.textContent.trim().slice(0,20))};")
+
+
+def t_AUD5():
+    for page in ("acces.html", "demandes.html", "recap.html", "expire.html", "confirmation.html"):
+        go("/guest/" + page)
+        time.sleep(2)
+        r = js(DETECT_JS)
+        check(f"{page} : balise format-detection telephone=no", r.get("meta") == "telephone=no", f"({r.get('meta')!r})")
+        check(f"{page} : aucun numéro transformé en lien par Safari", r.get("auto") == 0, f"({r})")
+        if page == "acces.html":
+            shot("AUD5-acces")
+            layout_ok("Accès")
+
+
+def massage_selection():
+    return js("const c=document.querySelector(\"[data-soin='decouverte']\");"
+              "return {picked: c && c.querySelector('.soin-pick') ? c.querySelector('.soin-pick').getAttribute('aria-pressed') : null,"
+              "date: (document.querySelector(\"[data-massage-form] [name='date']\")||{}).value || '',"
+              "total: (document.querySelector('[data-massage-form] [data-price-total]')||{}).textContent || '', path: location.pathname};")
+
+
+def brochure_open():
+    return js("const d=document.querySelector('[data-brochure]'); if(!d) return false; const r=d.getBoundingClientRect(); return (d.open || !d.hidden) && r.width>0 && r.height>0 && getComputedStyle(d).display!=='none';")
+
+
+def t_AUD6():
+    open_guest("massage.html")
+    tap("[data-soin='decouverte'] .soin-pick", guard=True)
+    set_field("[data-massage-form] [name='date']", D(9))
+    before = massage_selection()
+    check("sélection faite (1 soin + date)", before.get("picked") == "true" and before.get("date") == D(9), f"({before})")
+    tap("[data-brochure-open]", guard=True)
+    wait_js("(" + "(()=>{const d=document.querySelector('[data-brochure]'); return d && (d.open || !d.hidden);})()" + ")", 15, "visionneuse ouverte")
+    check("visionneuse ouverte, page 1 sur 4", (text_of("[data-brochure-live]") or "") == "Page 1 sur 4", f"({text_of('[data-brochure-live]')!r})")
+    tap("[data-brochure-go='1']", guard=True)
+    wait_js("(document.querySelector('[data-brochure-live]')||{}).textContent === 'Page 2 sur 4'", 10, "page 2 (flèche)")
+    # balayage réel vers la gauche, puis flèche en repli si besoin
+    how = []
+    for _ in range(4):
+        if text_of("[data-brochure-live]") == "Page 4 sur 4":
+            break
+        native()
+        try:
+            d.execute_script("mobile: swipe", {"direction": "left"})
+        finally:
+            web()
+        time.sleep(1.2)
+        how.append("geste")
+    if text_of("[data-brochure-live]") != "Page 4 sur 4":
+        for _ in range(3):
+            if text_of("[data-brochure-live]") == "Page 4 sur 4":
+                break
+            tap("[data-brochure-go='1']")
+            how.append("flèche")
+            time.sleep(0.8)
+    check("pages 2 à 4 parcourues", text_of("[data-brochure-live]") == "Page 4 sur 4", f"({text_of('[data-brochure-live]')!r}, moyens {how})")
+    note(f"AUD6 : pages 3–4 atteintes par {how or ['flèche']}")
+    shot("AUD6-01-visionneuse")
+    tap("[data-brochure-close]", guard=True)
+    wait_js("!(" + "(()=>{const d=document.querySelector('[data-brochure]'); return d && (d.open || !d.hidden) && getComputedStyle(d).display!=='none';})()" + ")", 10, "visionneuse fermée (Fermer)")
+    after = massage_selection()
+    check("« Fermer » : sélection conservée", after == before, f"({after})")
+    tap("[data-brochure-open]", guard=True)
+    wait_js("(" + "(()=>{const d=document.querySelector('[data-brochure]'); return d && (d.open || !d.hidden);})()" + ")", 15, "visionneuse rouverte")
+    d.back()  # bouton / geste retour de Safari
+    time.sleep(1.5)
+    wait_js("!(" + "(()=>{const d=document.querySelector('[data-brochure]'); return d && (d.open || !d.hidden) && getComputedStyle(d).display!=='none';})()" + ")", 10, "visionneuse fermée (retour)")
+    after2 = massage_selection()
+    check("retour : on reste sur la page, sélection conservée", after2 == before, f"({after2})")
+    shot("AUD6-02-apres-fermeture")
+    layout_ok("Massages")
+
+
+def t_AUD8():
+    open_guest("massage.html")
+    main = js("return document.querySelector('main').innerText;")
+    check("massages : MAD affiché", "MAD" in main)
+    check("massages : aucun « DH »", not __import__("re").search(r"\bDH\b", main))
+    shot("AUD8-01-massages")
+    go("/guest/activites.html")
+    stay_ready()
+    main = js("return document.querySelector('main').innerText;")
+    check("expériences : MAD affiché", "MAD" in main)
+    check("expériences : aucun « DH »", not __import__("re").search(r"\bDH\b", main))
+    layout_ok("Expériences")
+    go("/guest/recap.html")
+    stay_ready()
+    time.sleep(2)
+    rate = (text_of(".recap-rate") or "").replace("\u00a0", " ")
+    check("récap : « 1 € = 10 MAD »", "1 € = 10 MAD" in rate, f"({rate!r})")
+    bill = js("return [...document.querySelectorAll('[data-bill] li, [data-paid] li, [data-settled-lines] li')].map(e=>e.innerText).join(' | ');") or ""
+    main = js("return document.querySelector('main').innerText;")
+    check("récap : aucun « DH »", not __import__("re").search(r"\bDH\b", main))
+    if not bill.strip():
+        note("AUD8 : récapitulatif démo vide (aucune ligne), « soit … MAD » non vérifiable : documenté, pas un échec")
+    else:
+        b = bill.replace("\u00a0", " ")
+        check("récap : montants en €", "€" in b, f"({b[:120]!r})")
+        check("récap : « soit … MAD »", bool(__import__("re").search(r"soit [\d  ]+ MAD", main.replace("\u00a0", " "))), f"({main[:160]!r})")
+    shot("AUD8-02-recap")
+    layout_ok("Récapitulatif")
+
+
 def t_restore_demo():
     go("/guest/acces.html")
     js("localStorage.setItem('villazeno.stay', arguments[0]); localStorage.setItem('villazeno.stayKey', arguments[1]);", DEMO, GUEST_K)
@@ -1018,7 +1222,13 @@ def main():
             MAXS[0] = 0
             table = {"A1": ("admin : créer un séjour de test, convives préremplis côté invité", t_A1),
                      "A2": ("admin : Désactiver le lien → refusé côté invité", t_A2),
-                     "A3": ("admin : Prolonger le lien", t_A3)}
+                     "A3": ("admin : Prolonger le lien", t_A3),
+                     "AUD1": ("audit 1 : voyageurs Aéroport / En ville préremplis, modifiables", t_AUD1),
+                     "AUD2": ("audit 2 : siège bébé en compteur 0–3, +50 MAD", t_AUD2),
+                     "AUD4": ("audit 4 : Contacts utiles sans « depuis un fixe » ni sous-titre WhatsApp", t_AUD4),
+                     "AUD5": ("audit 5 : format-detection, aucun numéro lié par Safari", t_AUD5),
+                     "AUD6": ("audit 6 : brochure du spa (visionneuse, Fermer, retour, sélection conservée)", t_AUD6),
+                     "AUD8": ("audit 8 : MAD sur les services, récap en € « soit … MAD »", t_AUD8)}
             for tid in ONLY_OK:
                 if tid in ONLY:
                     run(tid, table[tid][0], table[tid][1])
